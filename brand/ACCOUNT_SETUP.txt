@@ -1,0 +1,48 @@
+THE PIXEL PADDOCK – INSTAGRAM ACCOUNT SETUP
+===========================================
+
+USERNAME
+  thepixelpaddock
+  Backups: pixelpaddock / pixel.paddock   (no "F1" in the handle – trademark)
+
+NAME (searchable field)
+  The Pixel Paddock | F1 News
+
+CATEGORY
+  Digital creator
+
+ACCOUNT TYPE
+  Settings > Account type and tools > Switch to professional account > Creator
+  (required for Buffer / automatic posting)
+
+BIO (max 150 characters)
+F1 news, decoded in pixels 🏁
+One story per post · verified facts · nerdy info boxes
+Race-week times in CET · numbers > noise 📊
+
+LINK
+  None at launch (add a newsletter or race-calendar page later)
+
+PROFILE PICTURE
+  1_profile/profile_picture.png (1080 x 1080, shown as a circle)
+
+STORY HIGHLIGHTS (covers in 2_highlights, 1080 x 1920)
+  NEWS        -> highlight_news.png
+  RACE WEEK   -> highlight_race_week.png
+  TECH        -> highlight_tech.png
+  STATS       -> highlight_stats.png
+  HISTORY     -> highlight_history.png
+  Tip: a highlight needs at least one story. Post each cover as a story,
+  add it to a new highlight with the matching name, then pin it.
+
+FIRST POST – "START HERE" (3_first_post, post as one carousel, pin it)
+Caption:
+Welcome to The Pixel Paddock 🏁
+One F1 story per post, decoded in pixels: the news, the key numbers and a chart or table that explains it. Verified facts, race-week times in CET, no rumours dressed up as facts.
+New issues on race days and in between. Follow for the next one.
+#F1 #PixelPaddock #F1News #Formula1 #PixelArt
+
+AFTER SETUP
+  1. Buffer: free account, connect this Instagram as a channel
+  2. Claude: Settings > Connectors > Add custom connector > https://mcp.buffer.com/mcp
+  3. GitHub: public repo (e.g. pixel-paddock-media) for post images, connect GitHub in Claude settings
