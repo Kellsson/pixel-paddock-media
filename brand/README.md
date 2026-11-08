@@ -10,6 +10,7 @@ Very clean, nerdy, diary-like, infographic-first. Dark mode, pixel fonts, neon-g
 ## Other account assets
 - `highlights/` holds the story-highlight covers (1080x1920): NEWS, RACE WEEK, TECH, STATS, HISTORY.
 - `start_here/` holds the pinned "Start here" carousel (3 slides).
+- `youtube/` holds the YouTube kit: profile picture (800x800), banner (2560x1440), watermark (150x150) and channel texts. Source: `src/youtube.py`.
 - `ACCOUNT_SETUP.txt` has the username, bio, category and Buffer/GitHub setup (status at launch, October 2026).
 
 ## Palette
