@@ -4,15 +4,15 @@ YouTube Shorts (v2): top-down pixel cars on the real track layout, told chronolo
 
 | Race | Video | Contact sheet |
 |---|---|---|
-| Brazil 1991, Interlagos (Senna, 71 laps, 91 s) | [1991_interlagos/recap.mp4](1991_interlagos/recap.mp4) | [sheet.png](1991_interlagos/sheet.png) |
-| Japan 2005, Suzuka (Räikkönen, 53 laps, 82 s) | [2005_suzuka/recap.mp4](2005_suzuka/recap.mp4) | [sheet.png](2005_suzuka/sheet.png) |
+| Brazil 1991, Interlagos (Senna, 71 laps, 73 s) | [1991_interlagos/recap.mp4](1991_interlagos/recap.mp4) | [sheet.png](1991_interlagos/sheet.png) |
+| Japan 2005, Suzuka (Räikkönen, 53 laps, 67 s) | [2005_suzuka/recap.mp4](2005_suzuka/recap.mp4) | [sheet.png](2005_suzuka/sheet.png) |
 
 Raw URLs (e.g. for Buffer):
 - https://raw.githubusercontent.com/Kellsson/pixel-paddock-media/main/shorts/1991_interlagos/recap.mp4
 - https://raw.githubusercontent.com/Kellsson/pixel-paddock-media/main/shorts/2005_suzuka/recap.mp4
 
 ## Status
-v3 (13 Nov 2026): story told in single-fact beats. Each fact is a yellow-framed callout box right next to the car it is about, one at a time, big text. Layout centred. Pit-stop time shown as a comparison bar card. Berger's fire gets its own grid beat with flames. Grid-vs-finish chart removed.
+v4 (13 Nov 2026): callouts find a free spot and glide away if a car moves under them. Zoomed track is wide enough for two cars side by side, and overtakes zoom in further so the cars stay on the track. 20 % faster pace. "F1 HISTORY" kicker on the title and outro. P1/P2 labels on cars in fights for the lead.
 
 ## Engine
 - `engine/map_recap.py`
@@ -28,6 +28,8 @@ v3 (13 Nov 2026): story told in single-fact beats. Each fact is a yellow-framed 
 Render: `cd shorts/engine && python3 races.py 91|05|both` writes to `engine/out_short/`. Needs Pillow, numpy and ffmpeg.
 
 ## Rules
+- Render prints CHECK lines (plausibility): car moving backwards, car off track, cars overlapping, car faster/slower than 0.7-1.3x the reference car, callout covering a car or label. Fix them or have a reason (contact, hairpin/crossover geometry).
+- On screen a car is ~65 m of Interlagos / ~135 m of Suzuka long at normal zoom: gaps between cars on the same line must be at least that.
 - Liveries use plain colours only, historically researched, no logos.
 - Text always sits on dark panels.
 - Cars must never cross the line backwards.

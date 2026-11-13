@@ -109,12 +109,20 @@ def project(tr, cam, p):
     cx, cy, z = cam; s = tr.fit * z
     return CX + (p[0] - cx) * s, MAP_CY + (p[1] - cy) * s
 
+def car_px(z): return min(7 + (z - 1) * 7, 17)   # capped: zooming in further makes cars relatively smaller
+def track_w(z):
+    w = max(3, int(2 + z * 2.2))
+    return max(w, int(car_px(z) * 1.6)) if z >= 1.8 else w
+def lat_half(z):
+    """screen offset for lat = +-1 (car centre at the track edge minus half a car width)"""
+    return max(1.0, track_w(z) / 2 - car_px(z) * .26)
+
 def draw_map(im, tr, cam, start_frac=0.0, sc_on=False, dim=1.0):
     d = ImageDraw.Draw(im); z = cam[2]
     P = [project(tr, cam, p) for p in tr.pts] + [project(tr, cam, tr.pts[0])]
-    w = max(3, int(2 + z * 2.2))
+    w = track_w(z)
     c = lambda col: tuple(int(v * dim + BG[i] * (1 - dim)) for i, v in enumerate(col))
-    d.line(P, fill=c((60, 68, 92)), width=w + 2); d.line(P, fill=c((38, 42, 54) if not sc_on else (70, 62, 20)), width=w)
+    d.line(P, fill=c((60, 68, 92)), width=w + 2, joint="curve"); d.line(P, fill=c((38, 42, 54) if not sc_on else (70, 62, 20)), width=w, joint="curve")
     d.line(P, fill=c((48, 54, 70)), width=1)
     x, y = project(tr, cam, tr.at(start_frac)); h = tr.heading(start_frac) + math.pi / 2
     for k in range(-w // 2 - 1, w // 2 + 2):
@@ -169,7 +177,7 @@ def lap_card(im, tr, a, b, laps, t, sub=None, marks=()):
     if sub and t > .55: tx(d, CX - tw(sub) // 2, 134, sub, INK)
     return im
 
-def note_card(im, tr, lines, fr, speed=1.2, step=20):
+def note_card(im, tr, lines, fr, speed=1.2, step=14):
     """Lines pop in one at a time (step frames apart). Big numbers welcome: ("0", YEL, 6)."""
     draw_map(im, tr, (tr.cx, tr.cy, 1.0), dim=.25)
     im = shade(im, (0, 0, NW, NH), .4)
@@ -186,11 +194,11 @@ def results_board(im, title, rows, extra, fr):
     tx(d, CX - tw(title) // 2, 30, title, GRN)
     X = CX - 58   # board content was laid out for a centre of 58
     d.line([(X + 10, 39), (X + 106, 39)], fill=(30, 70, 40))
-    n = len(rows); start, step = 14, 16
+    n = len(rows); start, step = 10, 12
     glyph = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
     for k, (p, name, team, gap, grid) in enumerate(rows):
         order = n - 1 - k                     # back of the field first
-        t_in = start + order * step + (14 if k == 0 else 0)
+        t_in = start + order * step + (12 if k == 0 else 0)
         if fr < t_in: continue
         y = 44 + k * 17; age = fr - t_in
         scramble = age < 8
@@ -206,7 +214,7 @@ def results_board(im, title, rows, extra, fr):
             if delta:
                 col = GRN if delta > 0 else RED; tri(d, X + 60, y + 7, delta > 0, col); tx(d, X + 66, y + 7, str(abs(delta)), col)
             else: d.rectangle([X + 60, y + 9, X + 64, y + 9], fill=G2)
-    y = 48 + n * 17; t_ex = start + n * step + 26
+    y = 48 + n * 17; t_ex = start + n * step + 20
     for i, s in enumerate(extra):
         if fr >= t_ex + i * 10: tx(d, CX - tw(s) // 2, y, s, YEL if i == 0 else G2)
         y += 9
@@ -239,30 +247,56 @@ def grid_card(im, tr, rows, fr, fire=None, delay=True):
                 d.line([(fx, fy), (fx + rr.integers(-1, 2), fy - hgt)], fill=[(255, 220, 60), (255, 140, 20), (230, 50, 20)][int(rr.integers(0, 3))])
     return im
 
-def callout(im, anchor, lines, age, side="up"):
-    """Fact box right next to the action, with a yellow pointer to the car. lines: [(text, colour, scale)]."""
-    if age < 0 or not lines: return im
-    ax, ay = anchor
-    w = max(tw(t, sc) for t, _, sc in lines) + 10; h = sum(5 * sc + 4 for _, _, sc in lines) + 6
-    gapy = 17
-    by0 = ay - gapy - h if side == "up" else ay + gapy
-    if by0 < 24: by0 = ay + gapy; side = "down"
-    if by0 + h > SAFE_Y1: by0 = ay - gapy - h; side = "up"
+def box_size(lines):
+    return max(tw(t, sc) for t, _, sc in lines) + 10, sum(5 * sc + 4 for _, _, sc in lines) + 6
+
+def clamp_box(bx0, by0, w, h):
     xmax = (YT_X if by0 + h > 120 else SAFE_X1) - w
-    bx0 = int(max(SAFE_X0, min(xmax, ax - w / 2))); by0 = int(by0)
+    return int(max(SAFE_X0, min(xmax, bx0))), int(by0)
+
+def box_hits(box, avoid, skip=None):
+    bx0, by0, w, h = box; n = 0
+    for k_, x, y, r in avoid:
+        if k_ == skip: r = r * .8
+        qx = min(max(x, bx0), bx0 + w); qy = min(max(y, by0), by0 + h)
+        if (qx - x) ** 2 + (qy - y) ** 2 < (r + 2) ** 2: n += 1
+    return n
+
+def place_callout(anchor, lines, pref, avoid, target):
+    """Try above/below and left/centre/right; pick the spot that covers no car and no label."""
+    ax, ay = anchor; w, h = box_size(lines); best = None
+    for side in (pref, "down" if pref == "up" else "up"):
+        for gap in (17, 26, 36, 48):
+            for xo in (-w / 2, -w + 14, -14):
+                by0 = ay - gap - h if side == "up" else ay + gap
+                bx0, by0c = clamp_box(ax + xo, by0, w, h)
+                oob = by0 < 24 or by0 + h > SAFE_Y1
+                score = box_hits((bx0, by0c, w, h), avoid, target) * 10 + oob * 25 + (side != pref) + (gap - 17) * .03 + (xo != -w / 2) * .3
+                if best is None or score < best[0]: best = (score, bx0 - ax, by0c - ay, side)
+    return best[1:]
+
+def callout(im, anchor, lines, age, rel):
+    """Fact box right next to the action, with a yellow pointer to the car. lines: [(text, colour, scale)]."""
+    if age < 0 or not lines: return im, None
+    ax, ay = anchor; dx, dy, side = rel
+    w, h = box_size(lines)
+    bx0, by0 = clamp_box(ax + dx, max(24, min(SAFE_Y1 - h, ay + dy)), w, h)
     k = ease(min(1, age / 5)); wk = max(4, int(w * k))
     cx0 = bx0 + (w - wk) // 2
     im = shade(im, (cx0, by0, cx0 + wk, by0 + h), .12); d = ImageDraw.Draw(im)
     d.rectangle([cx0, by0, cx0 + wk - 1, by0 + h - 1], outline=YEL)
     px_ = min(max(ax, bx0 + 3), bx0 + w - 4)
-    if side == "up": d.line([(px_, by0 + h), (ax, ay - 4)], fill=YEL)
-    else: d.line([(px_, by0 - 1), (ax, ay + 4)], fill=YEL)
+    if by0 > ay: d.line([(px_, by0 - 1), (ax, ay + 4)], fill=YEL)
+    else: d.line([(px_, by0 + h), (ax, ay - 4)], fill=YEL)
     if age >= 5:
         budget = (age - 5) * 3; y = by0 + 4
         for t, c, sc in lines:
             show = t[:max(0, budget)]; budget -= len(t)
             tx(d, bx0 + (w - tw(t, sc)) // 2, y, show, c, sc); y += 5 * sc + 4
-    return im
+    return im, (bx0, by0, w, h)
+
+WARN = {}
+def warn(video, seg, msg): WARN.setdefault((video, seg, msg), 0); WARN[(video, seg, msg)] += 1
 
 def headline(im, text, col, age, y=24, sc=2):
     if age < 0: return im
@@ -279,15 +313,15 @@ def compare_card(im, tr, title, rows, unit, fr, note=None):
     tx(d, CX - tw(title, 2) // 2, 48, title, INK, 2)
     vmax = max(v for _, v, _ in rows); bx0, bx1 = CX - 52, CX + 52
     for i, (lbl, v, col) in enumerate(rows):
-        t0 = 12 + i * 55; y = 74 + i * 34
+        t0 = 10 + i * 40; y = 74 + i * 34
         if fr < t0: continue
-        k = min(1, (fr - t0) / 40); val = v * k
+        k = min(1, (fr - t0) / 30); val = v * k
         tx(d, bx0, y, lbl, MUT if k < 1 else INK, 2)
         by = y + 14
         d.rectangle([bx0, by, bx1, by + 7], fill=(30, 34, 48))
         d.rectangle([bx0, by, bx0 + int((bx1 - bx0) * val / vmax), by + 7], fill=col)
         num = f"{val:.0f} {unit}"; tx(d, bx1 - tw(num, 2), y, num, col if k >= 1 else INK, 2)
-    if note and fr > 12 + len(rows) * 55:
+    if note and fr > 10 + len(rows) * 40:
         for j, (t, c, sc) in enumerate(note): tx(d, CX - tw(t, sc) // 2, 148 + j * 14, t, c, sc)
     return im
 
@@ -311,12 +345,28 @@ def strategy_card(im, title, rows, sub, laps, fr):
         for j, (s, c, sc) in enumerate(sub): tx(d, CX - tw(s, sc) // 2, 156 + j * 14, s, c, sc)
     return im
 
-def apply_calls(im, sg, fr, anchors):
+def apply_calls(im, sg, fr, anchors, avoid=(), where=("", 0)):
     if sg.get("head"): im = headline(im, sg["head"][0], sg["head"][1], fr - sg["head"][2] if len(sg["head"]) > 2 else fr - 4)
     calls = [c for c in sg.get("call", ()) if fr >= c[0] and (len(c) < 5 or fr < c[4])]
     if calls:
         at, tgt, lines, side = calls[-1][:4]   # only one fact on screen at a time
-        if tgt in anchors: im = callout(im, anchors[tgt], lines, fr - at, side)
+        if tgt in anchors:
+            cache = sg.setdefault("_place", {})
+            others = [a for a in avoid if a[0] != tgt]
+            if at not in cache:
+                p_ = place_callout(anchors[tgt], lines, side, avoid, tgt); cache[at] = [list(p_), list(p_)]
+            cur, goal = cache[at]
+            ax, ay = anchors[tgt]; w_, h_ = box_size(lines)
+            b_ = clamp_box(ax + cur[0], max(24, min(SAFE_Y1 - h_, ay + cur[1])), w_, h_)
+            if box_hits((*b_, w_, h_), others):          # cars moved into the box: glide to a free spot
+                p_ = place_callout(anchors[tgt], lines, side, avoid, tgt)
+                nb = clamp_box(ax + p_[0], max(24, min(SAFE_Y1 - h_, ay + p_[1])), w_, h_)
+                if box_hits((*nb, w_, h_), others) < box_hits((*b_, w_, h_), others): goal[:] = list(p_)
+            cur[0] += (goal[0] - cur[0]) * .25; cur[1] += (goal[1] - cur[1]) * .25; cur[2] = goal[2]
+            im, box = callout(im, anchors[tgt], lines, fr - at, tuple(cur))
+            if box and fr - at >= 5 and box_hits(box, [a for a in avoid if a[0] != tgt]):
+                warn(where[0], where[1], f"callout '{lines[0][0]}' covers a car/label")
+    elif sg.get("head") is None and False: pass
     return im
 
 # ---------------- generic renderer ----------------
@@ -342,10 +392,11 @@ def render(R, name):
                 elif "gridcard" in sg:
                     im = grid_card(im, tr, sg["gridcard"], fr, sg.get("fire"), sg.get("delay", True))
                     anchors = {("slot", r[0]): grid_slot(sg["gridcard"], r[0]) for r in sg["gridcard"]}
-                    im = apply_calls(im, sg, fr, anchors)
+                    av = [(("slot", k_), x_, y_, 6) for k_, (x_, y_) in anchors.items()]
+                    im = apply_calls(im, sg, fr, anchors, av, (name, si))
                 else:
                     draw_map(im, tr, (tr.cx, tr.cy, 1.0), dim=.5)
-                    im = panel(im, [(t, c, sc_) if fr >= 6 + i * 20 else ("", c, sc_) for i, (t, c, sc_) in enumerate(sg["text"])], y0=70)
+                    im = panel(im, [(t, c, sc_) if fr >= 6 + i * 14 else ("", c, sc_) for i, (t, c, sc_) in enumerate(sg["text"])], y0=70)
                     if fr > 50:
                         d = ImageDraw.Draw(im); tx(d, CX - tw("THE PIXEL PADDOCK") // 2, 130, "THE PIXEL PADDOCK", GRN)
                 if fr == F - 4: snaps.append(im)
@@ -354,14 +405,14 @@ def render(R, name):
             continue
         g0 = dict(gaps_prev); g0.update(sg.get("set", {})); g1 = dict(g0); g1.update(sg.get("gaps", {}))
         v_lead = (sg["laps"][1] - sg["laps"][0]) * L / max(1, F - 1)  # metres per frame
-        spin_state = {}
+        spin_state = {}; prev_pos = {}
         for fr in range(F):
             t = fr / max(1, F - 1); te = ease(t)
             lapf = lerp(sg["laps"][0], sg["laps"][1], t if sg.get("linear", True) else te)
             lead_s = lapf * L
             pos, lat, ang_add = {}, {}, {}
             for c in R["cars"]:
-                gap = lerp(g0[c], g1[c], te)
+                gap = lerp(g0[c], g1[c], t if sg.get("glin") else te)   # glin: steady closing speed (overtakes)
                 pos[c] = lead_s - gap
                 la = sg.get("lat", {}).get(c); lat[c] = lerp(la[0], la[1], te) if la else 0
                 ang_add[c] = 0
@@ -377,25 +428,45 @@ def render(R, name):
             if tgt[0] == "over": ctg = (tr.cx, tr.cy, 1.0)
             elif tgt[0] == "frac": x, y = tr.at(tgt[1]); ctg = (x, y, tgt[2])
             elif tgt[0] == "pan": x, y = tr.at(lerp(tgt[1], tgt[2], ease(t))); ctg = (x, y, tgt[3])
-            else: x, y = tr.at(pos[tgt[1]] / L); ctg = (x, y, tgt[2])
+            else:
+                x, y = tr.at(pos[tgt[1]] / L); dx, dy = (tgt[3], tgt[4]) if len(tgt) > 4 else (0, 0)
+                ctg = (x - dx / (tr.fit * tgt[2]), y - dy / (tr.fit * tgt[2]), tgt[2])
             if cut: cam = ctg
             else:
                 k = ease(min(1, fr / 24)); cam = tuple(lerp(cam_prev[i], ctg[i], k) for i in range(3))
             im = Image.new("RGB", (NW, NH), BG)
             sc_v = sg.get("sc", False); sc_on = sc_v is True or (sc_v is not False and t >= sc_v)
             d = draw_map(im, tr, cam, R.get("start_frac", 0), sc_on=sc_on)
-            z = cam[2]; px = 7 + (z - 1) * 7; anchors = {}
+            z = cam[2]; px = car_px(z); anchors = {}; avoid = []
             for c in sorted(R["cars"], key=lambda c: pos[c]):
                 if c in sg.get("hide", ()) or c in gone: continue
                 fr_ = pos[c] / L
                 x, y = project(tr, cam, tr.at(fr_)); h = tr.heading(fr_)
-                x += -math.sin(h) * lat[c] * px * .5; y += math.cos(h) * lat[c] * px * .5
-                anchors[c] = (x, y)
+                hl = lat_half(z); x += -math.sin(h) * lat[c] * hl; y += math.cos(h) * lat[c] * hl
+                anchors[c] = (x, y); avoid.append((c, x, y, px * .55))
                 if -20 < x < NW + 20 and -20 < y < NH + 20:
                     draw_car(d, x, y, h + ang_add[c], R["cars"][c][0], px, helmet=R["cars"][c][1])
                     if z >= 2.2 and c in sg.get("labels", ()):
-                        lx, ly = int(x) - tw(c) // 2, int(y) - int(px * .6) - 8
-                        tx(d, lx + 1, ly + 1, c, (6, 8, 16)); tx(d, lx, ly, c, INK)
+                        lab = (f"P{sg['pos'][c]} " if c in sg.get("pos", {}) else "") + c
+                        lx, ly = int(x) - tw(lab) // 2, int(y) - int(px * .6) - 8
+                        tx(d, lx + 1, ly + 1, lab, (6, 8, 16)); tx(d, lx, ly, lab, YEL if c in sg.get("pos", {}) and sg["pos"][c] == 1 else INK)
+                        avoid.append((c, x, ly + 2, tw(lab) / 2 + 1))
+                # plausibility: never backwards (unless spinning / pitting), stay on track
+                if c not in sg.get("spin", {}) and c not in sg.get("pit", {}) and c not in sg.get("hide", ()):
+                    if fr > 0 and pos[c] < prev_pos.get(c, -1e9) - .3: warn(name, si, f"{c} moves backwards")
+                    if fr > 0 and c in prev_pos and v_lead > 1 and sg.get("linear", True):
+                        ratio = (pos[c] - prev_pos[c]) / v_lead
+                        if ratio > 1.3 or ratio < .7: warn(name, si, f"{c} speed outside 0.7-1.3x the reference car")
+                    if abs(lat[c]) > 1.05: warn(name, si, f"{c} off track (lat {lat[c]:.1f})")
+                prev_pos[c] = pos[c]
+            vis_ = [(c, anchors[c], tr.heading(pos[c] / L)) for c in anchors if c not in sg.get("hide", ()) and c not in gone and c not in sg.get("pit", {})
+                    and -10 < anchors[c][0] < NW + 10 and -10 < anchors[c][1] < NH + 10]
+            for i_ in range(len(vis_)):
+                for j_ in range(i_ + 1, len(vis_)):
+                    (ca, (xa, ya), ha), (cb, (xb, yb), _) = vis_[i_], vis_[j_]
+                    dx_, dy_ = xb - xa, yb - ya
+                    lo = abs(dx_ * math.cos(ha) + dy_ * math.sin(ha)); la = abs(-dx_ * math.sin(ha) + dy_ * math.cos(ha))
+                    if lo < .95 * px and la < .47 * px and z >= 1.8: warn(name, si, f"{ca} and {cb} overlap")
             if sg.get("rain"):
                 rr = np.random.default_rng(fr)
                 for _ in range(int(90 * sg["rain"])):
@@ -416,7 +487,7 @@ def render(R, name):
                 lapn = min(R["laps"], max(1, math.floor(lapf) + 1))
                 im = hud(im, lapn, R["laps"]) if sg.get("noleader") else hud(im, lapn, R["laps"], R["names"][lead], R["cars"][lead][0])
             for f_ in sg.get("fracs", ()): anchors[("frac", f_)] = project(tr, cam, tr.at(f_))
-            im = apply_calls(im, sg, fr, anchors)
+            im = apply_calls(im, sg, fr, anchors, avoid, (name, si))
             if fr == F - 4: snaps.append(im)
             p.stdin.write(im.resize((NW * SC, NH * SC), Image.NEAREST).tobytes())
             cut = False
@@ -424,7 +495,9 @@ def render(R, name):
     p.stdin.close(); p.wait()
     sh = Image.new("RGB", (180 * len(snaps), 320))
     for i, s_ in enumerate(snaps): sh.paste(s_.resize((180, 320), Image.NEAREST), (i * 180, 0))
-    sh.save(f"{OUT}/{name}_sheet.png"); print(name, "sec", total / FPS)
+    sh.save(f"{OUT}/{name}_sheet.png"); print(name, "sec", round(total / FPS, 1))
+    for (v, sgi, msg), n in sorted(WARN.items()):
+        if v == name: print(f"  CHECK seg {sgi}: {msg} ({n} frames)")
 
 # ---------------- audio (shared) ----------------
 NOTE = lambda m: 440 * 2 ** ((m - 69) / 12)
@@ -449,19 +522,19 @@ def make_audio(tag):
             elif "board" in sg:
                 n = len(sg["board"][1])
                 for k in range(n):
-                    tt = st + (14 + k * 16 + (14 if k == n - 1 else 0)) / FPS
+                    tt = st + (10 + k * 12 + (12 if k == n - 1 else 0)) / FPS
                     for j in range(4): mix(buf, tone(NOTE(90 - j), .02, .05, "sq", 30), tt + j * .05)
                     mix(buf, tone(NOTE(72 + (k * 2 if k < n - 1 else 12)), .14, .08, "sq", 6), tt + .27)
             elif "compare" in sg:
                 for i in range(len(sg["compare"][1])):
-                    t0 = st + (12 + i * 55) / FPS
-                    for k in range(10): mix(buf, tone(NOTE(84), .015, .045, "sq", 40), t0 + k * 40 / FPS / 10)
-                    mix(buf, tone(NOTE(76 + i * 5), .2, .08, "sq", 5), t0 + 40 / FPS)
+                    t0 = st + (10 + i * 40) / FPS
+                    for k in range(10): mix(buf, tone(NOTE(84), .015, .045, "sq", 40), t0 + k * 30 / FPS / 10)
+                    mix(buf, tone(NOTE(76 + i * 5), .2, .08, "sq", 5), t0 + 30 / FPS)
             elif sg.get("outro"):
                 for m, t, du in MOTIF: mix(buf, tone(NOTE(m), du * 1.2, .10, "tri", 1.5), st + .3 + t)
             else:
                 if sg.get("note") or sg.get("text"):
-                    for i in range(len(sg.get("note") or sg.get("text"))): mix(buf, tone(NOTE(76 + i * 2), .07, .06, "sq", 10), st + (6 + i * 20) / FPS)
+                    for i in range(len(sg.get("note") or sg.get("text"))): mix(buf, tone(NOTE(76 + i * 2), .07, .06, "sq", 10), st + (6 + i * 14) / FPS)
                 for c in sg.get("call", ()): mix(buf, tone(NOTE(81), .06, .07, "sq", 12), st + c[0] / FPS); mix(buf, tone(NOTE(88), .05, .05, "sq", 12), st + c[0] / FPS + .06)
                 if sg.get("fire"):
                     nz = np.random.default_rng(5).uniform(-1, 1, int(SR * F / FPS)) * .03; mix(buf, nz, st + .4)
