@@ -15,7 +15,8 @@ from font3 import FONT3
 HERE = os.path.dirname(os.path.abspath(__file__)); OUT = os.path.join(HERE, "out_short"); os.makedirs(OUT, exist_ok=True)
 NW, NH, SC, FPS, SR = 135, 240, 8, 30, 44100
 # YouTube Shorts safe zone in logical pixels (1 px = 8 video px): keep text and key action inside it.
-SAFE_X0, SAFE_X1, SAFE_Y0, SAFE_Y1 = 4, 112, 8, 172
+SAFE_X0, SAFE_X1, SAFE_Y0, SAFE_Y1 = 6, 129, 8, 172
+YT_X = 114   # below y=120 the YouTube like/comment buttons sit right of this
 CX = (SAFE_X0 + SAFE_X1) // 2
 for k, v in {":": "000010000010000", "'": "010010000000000", ",": "000000000010100", ".": "000000000000010", "+": "000010111010000",
              "-": "000000111000000", "!": "010010010000010", "/": "001001010100100", "Q": "010101101110011", "?": "111001011000010", "Z": "111001010100111"}.items():
@@ -146,8 +147,8 @@ def hud(im, lap, laps, leader=None, lead_team=None):
     # compact top strip: lap counter + leader. Nothing at the bottom (YouTube overlays live there).
     im = shade(im, (SAFE_X0, 8, SAFE_X1, 20), .15); d = ImageDraw.Draw(im)
     d.rectangle([SAFE_X0, 8, SAFE_X1 - 1, 19], outline=EDGE)
-    tx(d, 8, 12, "LAP", MUT); tx(d, 22, 12, f"{lap}/{laps}", INK)
-    if leader: d.rectangle([54, 12, 56, 16], fill=team_col(lead_team)); tx(d, 59, 12, leader, INK)
+    tx(d, SAFE_X0 + 4, 12, "LAP", MUT); tx(d, SAFE_X0 + 18, 12, f"{lap}/{laps}", INK)
+    if leader: d.rectangle([SAFE_X0 + 50, 12, SAFE_X0 + 52, 16], fill=team_col(lead_team)); tx(d, SAFE_X0 + 55, 12, leader, INK)
     return im
 
 # ---------------- full-screen cards ----------------
@@ -160,7 +161,7 @@ def lap_card(im, tr, a, b, laps, t, sub=None, marks=()):
     s = str(n); big = 6; tot = f"/{laps}"
     wbig = tw(s, big); wsm = tw(tot, 2); x0 = CX - (wbig + 3 + wsm) // 2
     tx(d, x0, 80, s, INK if t < .65 else YEL, big); tx(d, x0 + wbig + 3, 100, tot, MUT, 2)
-    bx0, bx1, by = 14, 102, 122
+    bx0, bx1, by = CX - 44, CX + 44, 122
     d.rectangle([bx0, by, bx1, by + 3], fill=(30, 34, 48))
     d.rectangle([bx0, by, bx0 + int((bx1 - bx0) * lerp(a, b, k) / laps), by + 3], fill=GRN)
     for m in marks:
@@ -168,10 +169,13 @@ def lap_card(im, tr, a, b, laps, t, sub=None, marks=()):
     if sub and t > .55: tx(d, CX - tw(sub) // 2, 134, sub, INK)
     return im
 
-def note_card(im, tr, lines, fr, speed=1.2):
+def note_card(im, tr, lines, fr, speed=1.2, step=20):
+    """Lines pop in one at a time (step frames apart). Big numbers welcome: ("0", YEL, 6)."""
     draw_map(im, tr, (tr.cx, tr.cy, 1.0), dim=.25)
     im = shade(im, (0, 0, NW, NH), .4)
-    return panel(im, typed(lines, fr, speed), y0=70)
+    h = sum(5 * sc + 6 for _, _, sc in lines) + 8
+    shown = [(t, c, sc) if fr >= 6 + i * step else ("", c, sc) for i, (t, c, sc) in enumerate(lines)]
+    return panel(im, shown, y0=max(30, 96 - h // 2))
 
 def results_board(im, title, rows, extra, fr):
     """Timing board. rows: (pos, name, team, gap, grid). Rows flip in from the back, P1 last, then notes."""
@@ -180,7 +184,8 @@ def results_board(im, title, rows, extra, fr):
     for y in range(26, 165, 3): d.line([(SAFE_X0 + 3, y), (SAFE_X1 - 3, y)], fill=(2, 10, 6))
     G1, G2 = (150, 255, 160), (70, 150, 90)
     tx(d, CX - tw(title) // 2, 30, title, GRN)
-    d.line([(10, 39), (106, 39)], fill=(30, 70, 40))
+    X = CX - 58   # board content was laid out for a centre of 58
+    d.line([(X + 10, 39), (X + 106, 39)], fill=(30, 70, 40))
     n = len(rows); start, step = 14, 16
     glyph = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
     for k, (p, name, team, gap, grid) in enumerate(rows):
@@ -190,54 +195,35 @@ def results_board(im, title, rows, extra, fr):
         y = 44 + k * 17; age = fr - t_in
         scramble = age < 8
         def sc_(s): return "".join(glyph[(ord(ch) * 7 + fr * 13 + i * 5) % len(glyph)] if ch != " " and scramble else ch for i, ch in enumerate(s))
-        if k == 0 and age > 8 and (fr // 6) % 2 == 0: d.rectangle([9, y - 2, 107, y + 13], outline=GRN)
-        tx(d, 12, y, p, GRN if k == 0 else G1)
-        d.rectangle([19, y, 20, y + 4], fill=team_col(team))
-        tx(d, 23, y, sc_(name), INK if k == 0 else G1)
-        g = sc_(gap); tx(d, 105 - tw(g), y, g, GRN if k == 0 else G1)
+        if k == 0 and age > 8 and (fr // 6) % 2 == 0: d.rectangle([X + 9, y - 2, X + 107, y + 13], outline=GRN)
+        tx(d, X + 12, y, p, GRN if k == 0 else G1)
+        d.rectangle([X + 19, y, X + 20, y + 4], fill=team_col(team))
+        tx(d, X + 23, y, sc_(name), INK if k == 0 else G1)
+        g = sc_(gap); tx(d, X + 105 - tw(g), y, g, GRN if k == 0 else G1)
         if not scramble and grid:
             delta = grid - int(p)
-            tx(d, 23, y + 7, f"GRID {grid}", G2)
+            tx(d, X + 23, y + 7, f"GRID {grid}", G2)
             if delta:
-                col = GRN if delta > 0 else RED; tri(d, 60, y + 7, delta > 0, col); tx(d, 66, y + 7, str(abs(delta)), col)
-            else: tx(d, 60, y + 7, "=", G2) if "=" in FONT3 else d.rectangle([60, y + 9, 64, y + 9], fill=G2)
+                col = GRN if delta > 0 else RED; tri(d, X + 60, y + 7, delta > 0, col); tx(d, X + 66, y + 7, str(abs(delta)), col)
+            else: d.rectangle([X + 60, y + 9, X + 64, y + 9], fill=G2)
     y = 48 + n * 17; t_ex = start + n * step + 26
     for i, s in enumerate(extra):
         if fr >= t_ex + i * 10: tx(d, CX - tw(s) // 2, y, s, YEL if i == 0 else G2)
         y += 9
     return im
 
-def slope_chart(im, title, rows, fr, maxgrid):
-    """Grid vs finish: where the top finishers started. No driver highlighted (house rule)."""
-    d = ImageDraw.Draw(im)
-    d.rectangle([SAFE_X0, 22, SAFE_X1, 168], fill=(14, 16, 26)); d.rectangle([SAFE_X0, 22, SAFE_X1, 168], outline=EDGE)
-    tx(d, CX - tw(title) // 2, 28, title, INK)
-    xL, xR, y0, y1 = 20, 46, 46, 158
-    tx(d, xL - tw("GRID") // 2, 38, "GRID", MUT); tx(d, xR - tw("FINISH") // 2, 38, "FINISH", MUT)
-    yg = lambda g: y0 + (y1 - y0) * (g - 1) / max(1, maxgrid - 1)
-    yf = lambda f: y0 + (f - 1) * 12
-    for g in range(1, maxgrid + 1):
-        d.point((xL - 2, yg(g)), fill=(60, 66, 90))
-    k = ease(min(1, fr / 40))
-    for p, name, team, gap, grid in rows:
-        f = int(p); a = (xL, yg(grid)); b = (xR, yf(f)); col = team_col(team)
-        e = (lerp(a[0], b[0], k), lerp(a[1], b[1], k))
-        d.line([a, e], fill=col, width=1)
-        d.rectangle([a[0] - 1, a[1] - 1, a[0] + 1, a[1] + 1], fill=col)
-        tx(d, xL - 6 - tw(str(grid)), int(a[1]) - 2, str(grid), MUT)
-        if k >= 1:
-            d.rectangle([b[0] - 1, b[1] - 1, b[0] + 1, b[1] + 1], fill=col)
-            tx(d, xR + 4, int(b[1]) - 2, f"{f} {name}", INK)
-    return im
+def grid_slot(rows, pos):
+    n = max(r[0] for r in rows); step = min(12, 92 / max(1, n - 1)); y0 = 74
+    return (CX - 13 if pos % 2 else CX + 13), y0 + (pos - 1) * step
 
-def grid_card(im, tr, rows, fr):
+def grid_card(im, tr, rows, fr, fire=None, delay=True):
     """Starting grid as a staggered slot diagram. rows: (pos, code or None, team). Unnamed slots are grey."""
     draw_map(im, tr, (tr.cx, tr.cy, 1.0), dim=.18); d = ImageDraw.Draw(im)
     n = max(r[0] for r in rows); step = min(12, 92 / max(1, n - 1)); y0 = 74
-    xl, xr = 44, 70; px = 9 if n > 10 else 12
+    xl, xr = CX - 13, CX + 13; px = 9 if n > 10 else 12
     d.line([(CX - 22, y0 - 8), (CX + 22, y0 - 8)], fill=INK)
     for k, (pos, code, team) in enumerate(sorted(rows)):
-        if fr < 6 + k * 3: continue
+        if delay and fr < 6 + k * 3: continue
         x = xl if pos % 2 else xr; y = y0 + (pos - 1) * step
         d.line([(x - 5, y - px * .55), (x + 5, y - px * .55)], fill=(70, 78, 104))
         draw_car(d, x, y, -math.pi / 2, team if code else "GEN", px)
@@ -246,27 +232,91 @@ def grid_card(im, tr, rows, fr):
             col = YEL if code.startswith("*") else INK; c = code.lstrip("*")
             if pos % 2: tx(d, x - 9 - tw(c), int(y) - 2, c, col); tx(d, x - 9 - tw(c) - 4 - tw(num), int(y) - 2, num, MUT)
             else: tx(d, x + 9, int(y) - 2, c, col); tx(d, x + 9 + tw(c) + 4, int(y) - 2, num, MUT)
+        if fire == pos and fr > 10:
+            rr = np.random.default_rng(fr // 2)
+            for _ in range(14):
+                fx = x + rr.integers(-3, 4); fy = y + px * .15 + rr.integers(-1, 3); hgt = int(rr.integers(2, 7))
+                d.line([(fx, fy), (fx + rr.integers(-1, 2), fy - hgt)], fill=[(255, 220, 60), (255, 140, 20), (230, 50, 20)][int(rr.integers(0, 3))])
+    return im
+
+def callout(im, anchor, lines, age, side="up"):
+    """Fact box right next to the action, with a yellow pointer to the car. lines: [(text, colour, scale)]."""
+    if age < 0 or not lines: return im
+    ax, ay = anchor
+    w = max(tw(t, sc) for t, _, sc in lines) + 10; h = sum(5 * sc + 4 for _, _, sc in lines) + 6
+    gapy = 17
+    by0 = ay - gapy - h if side == "up" else ay + gapy
+    if by0 < 24: by0 = ay + gapy; side = "down"
+    if by0 + h > SAFE_Y1: by0 = ay - gapy - h; side = "up"
+    xmax = (YT_X if by0 + h > 120 else SAFE_X1) - w
+    bx0 = int(max(SAFE_X0, min(xmax, ax - w / 2))); by0 = int(by0)
+    k = ease(min(1, age / 5)); wk = max(4, int(w * k))
+    cx0 = bx0 + (w - wk) // 2
+    im = shade(im, (cx0, by0, cx0 + wk, by0 + h), .12); d = ImageDraw.Draw(im)
+    d.rectangle([cx0, by0, cx0 + wk - 1, by0 + h - 1], outline=YEL)
+    px_ = min(max(ax, bx0 + 3), bx0 + w - 4)
+    if side == "up": d.line([(px_, by0 + h), (ax, ay - 4)], fill=YEL)
+    else: d.line([(px_, by0 - 1), (ax, ay + 4)], fill=YEL)
+    if age >= 5:
+        budget = (age - 5) * 3; y = by0 + 4
+        for t, c, sc in lines:
+            show = t[:max(0, budget)]; budget -= len(t)
+            tx(d, bx0 + (w - tw(t, sc)) // 2, y, show, c, sc); y += 5 * sc + 4
+    return im
+
+def headline(im, text, col, age, y=24, sc=2):
+    if age < 0: return im
+    w = tw(text, sc) + 10
+    im = shade(im, (CX - w // 2, y, CX - w // 2 + w, y + 5 * sc + 8), .12); d = ImageDraw.Draw(im)
+    d.rectangle([CX - w // 2, y, CX - w // 2 + w - 1, y + 5 * sc + 7], outline=EDGE)
+    tx(d, CX - tw(text, sc) // 2, y + 4, text[:max(0, age * 2)], col, sc)
+    return im
+
+def compare_card(im, tr, title, rows, unit, fr, note=None):
+    """Bars that fill with a running number, one after the other. rows: (label, value, colour)."""
+    draw_map(im, tr, (tr.cx, tr.cy, 1.0), dim=.2)
+    im = shade(im, (0, 0, NW, NH), .4); d = ImageDraw.Draw(im)
+    tx(d, CX - tw(title, 2) // 2, 48, title, INK, 2)
+    vmax = max(v for _, v, _ in rows); bx0, bx1 = CX - 52, CX + 52
+    for i, (lbl, v, col) in enumerate(rows):
+        t0 = 12 + i * 55; y = 74 + i * 34
+        if fr < t0: continue
+        k = min(1, (fr - t0) / 40); val = v * k
+        tx(d, bx0, y, lbl, MUT if k < 1 else INK, 2)
+        by = y + 14
+        d.rectangle([bx0, by, bx1, by + 7], fill=(30, 34, 48))
+        d.rectangle([bx0, by, bx0 + int((bx1 - bx0) * val / vmax), by + 7], fill=col)
+        num = f"{val:.0f} {unit}"; tx(d, bx1 - tw(num, 2), y, num, col if k >= 1 else INK, 2)
+    if note and fr > 12 + len(rows) * 55:
+        for j, (t, c, sc) in enumerate(note): tx(d, CX - tw(t, sc) // 2, 148 + j * 14, t, c, sc)
     return im
 
 def strategy_card(im, title, rows, sub, laps, fr):
     """Pit-stop strategy infographic: one bar per driver over the race distance, stops marked with lap numbers."""
     d = ImageDraw.Draw(im)
-    d.rectangle([SAFE_X0, 40, SAFE_X1, 150], fill=(14, 16, 26), outline=EDGE)
+    d.rectangle([SAFE_X0, 40, SAFE_X1, 146], fill=(14, 16, 26), outline=EDGE)
     tx(d, CX - tw(title, 2) // 2, 48, title, INK, 2)
-    bx0, bx1 = 12, 104; k = ease(min(1, fr / 45))
+    bx0, bx1 = CX - 46, CX + 46; k = ease(min(1, fr / 45))
     for i, (name, team, stops) in enumerate(rows):
-        y = 74 + i * 30
-        tx(d, bx0, y, name, INK); d.rectangle([bx0 + tw(name) + 3, y, bx0 + tw(name) + 4, y + 4], fill=team_col(team))
-        by = y + 9
+        y = 70 + i * 34
+        tx(d, bx0, y, name, INK, 2); d.rectangle([bx0 + tw(name, 2) + 4, y, bx0 + tw(name, 2) + 6, y + 9], fill=team_col(team))
+        by = y + 14
         d.rectangle([bx0, by, bx1, by + 4], fill=(30, 34, 48))
         d.rectangle([bx0, by, bx0 + int((bx1 - bx0) * k), by + 4], fill=team_col(team))
         for st in stops:
             if k * laps >= st:
                 xs = bx0 + int((bx1 - bx0) * st / laps); d.rectangle([xs - 1, by - 2, xs + 1, by + 6], fill=YEL)
-                tx(d, xs - tw(str(st)) // 2, by + 9, str(st), YEL)
-    tx(d, bx0, 136, "LAP 1", MUT); tx(d, bx1 - tw(str(laps)) + 1, 136, str(laps), MUT)
+                tx(d, xs - tw(str(st), 2) // 2, by + 8, str(st), YEL, 2)
     if fr > 60 and sub:
-        for j, s in enumerate(sub): tx(d, CX - tw(s) // 2, 156 + j * 8, s, INK)
+        for j, (s, c, sc) in enumerate(sub): tx(d, CX - tw(s, sc) // 2, 156 + j * 14, s, c, sc)
+    return im
+
+def apply_calls(im, sg, fr, anchors):
+    if sg.get("head"): im = headline(im, sg["head"][0], sg["head"][1], fr - sg["head"][2] if len(sg["head"]) > 2 else fr - 4)
+    calls = [c for c in sg.get("call", ()) if fr >= c[0] and (len(c) < 5 or fr < c[4])]
+    if calls:
+        at, tgt, lines, side = calls[-1][:4]   # only one fact on screen at a time
+        if tgt in anchors: im = callout(im, anchors[tgt], lines, fr - at, side)
     return im
 
 # ---------------- generic renderer ----------------
@@ -281,20 +331,23 @@ def render(R, name):
     gaps_prev = {c: R["grid"][c] for c in R["cars"]}
     for si, sg in enumerate(segs):
         F = sg["frames"]; gone |= set(sg.get("drop", ()))
-        if "jump" in sg or "board" in sg or "slope" in sg or "note" in sg or "strategy" in sg or "gridcard" in sg or sg.get("outro"):
+        if "jump" in sg or "board" in sg or "note" in sg or "strategy" in sg or "gridcard" in sg or "compare" in sg or sg.get("outro"):
             for fr in range(F):
                 im = Image.new("RGB", (NW, NH), BG)
                 if "jump" in sg: im = lap_card(im, tr, *sg["jump"], R["laps"], fr / max(1, F - 1), sg.get("sub"), marks)
                 elif "board" in sg: im = results_board(im, *sg["board"], fr)
-                elif "slope" in sg: im = slope_chart(im, sg["slope"], R["results"], fr, R["maxgrid"])
+                elif "compare" in sg: im = compare_card(im, tr, *sg["compare"][:3], fr, *sg["compare"][3:])
                 elif "note" in sg: im = note_card(im, tr, sg["note"], fr, sg.get("tspeed", 1.2))
                 elif "strategy" in sg: im = strategy_card(im, *sg["strategy"], R["laps"], fr)
-                elif "gridcard" in sg: im = panel(grid_card(im, tr, sg["gridcard"], fr), typed(sg["text"], fr, sg.get("tspeed", 1.6)), y0=10)
+                elif "gridcard" in sg:
+                    im = grid_card(im, tr, sg["gridcard"], fr, sg.get("fire"), sg.get("delay", True))
+                    anchors = {("slot", r[0]): grid_slot(sg["gridcard"], r[0]) for r in sg["gridcard"]}
+                    im = apply_calls(im, sg, fr, anchors)
                 else:
                     draw_map(im, tr, (tr.cx, tr.cy, 1.0), dim=.5)
-                    im = panel(im, typed(sg["text"], fr, 1.2), y0=70)
-                    if fr > 30:
-                        d = ImageDraw.Draw(im); tx(d, CX - tw("THE PIXEL PADDOCK") // 2, 150, "THE PIXEL PADDOCK", GRN)
+                    im = panel(im, [(t, c, sc_) if fr >= 6 + i * 20 else ("", c, sc_) for i, (t, c, sc_) in enumerate(sg["text"])], y0=70)
+                    if fr > 50:
+                        d = ImageDraw.Draw(im); tx(d, CX - tw("THE PIXEL PADDOCK") // 2, 130, "THE PIXEL PADDOCK", GRN)
                 if fr == F - 4: snaps.append(im)
                 p.stdin.write(im.resize((NW * SC, NH * SC), Image.NEAREST).tobytes())
             cut = True
@@ -331,12 +384,13 @@ def render(R, name):
             im = Image.new("RGB", (NW, NH), BG)
             sc_v = sg.get("sc", False); sc_on = sc_v is True or (sc_v is not False and t >= sc_v)
             d = draw_map(im, tr, cam, R.get("start_frac", 0), sc_on=sc_on)
-            z = cam[2]; px = 7 + (z - 1) * 7
+            z = cam[2]; px = 7 + (z - 1) * 7; anchors = {}
             for c in sorted(R["cars"], key=lambda c: pos[c]):
                 if c in sg.get("hide", ()) or c in gone: continue
                 fr_ = pos[c] / L
                 x, y = project(tr, cam, tr.at(fr_)); h = tr.heading(fr_)
                 x += -math.sin(h) * lat[c] * px * .5; y += math.cos(h) * lat[c] * px * .5
+                anchors[c] = (x, y)
                 if -20 < x < NW + 20 and -20 < y < NH + 20:
                     draw_car(d, x, y, h + ang_add[c], R["cars"][c][0], px, helmet=R["cars"][c][1])
                     if z >= 2.2 and c in sg.get("labels", ()):
@@ -347,7 +401,7 @@ def render(R, name):
                 for _ in range(int(90 * sg["rain"])):
                     x0 = int(rr.integers(0, NW + 10)); y0 = int(rr.integers(0, NH)); d.line([(x0, y0), (x0 - 2, y0 + 4)], fill=(120, 140, 175))
             if sc_on and (fr // 8) % 2:
-                d.rectangle([SAFE_X1 - 22, 154, SAFE_X1 - 1, 167], fill=YEL); tx(d, SAFE_X1 - 17, 158, "SC", (10, 10, 10))
+                d.rectangle([SAFE_X0, 150, SAFE_X0 + 40, 167], fill=YEL); tx(d, SAFE_X0 + 5, 154, "SC", (10, 10, 10), 2)
             if sg.get("inset"): sg["inset"](d, fr)
             if sg.get("timer"):
                 a, b, lbl = sg["timer"]; k = min(1, fr / (F * .7)); val = lerp(a, b, k)
@@ -361,6 +415,8 @@ def render(R, name):
                 lead = sg.get("leader") or max(vis, key=lambda c: pos[c])
                 lapn = min(R["laps"], max(1, math.floor(lapf) + 1))
                 im = hud(im, lapn, R["laps"]) if sg.get("noleader") else hud(im, lapn, R["laps"], R["names"][lead], R["cars"][lead][0])
+            for f_ in sg.get("fracs", ()): anchors[("frac", f_)] = project(tr, cam, tr.at(f_))
+            im = apply_calls(im, sg, fr, anchors)
             if fr == F - 4: snaps.append(im)
             p.stdin.write(im.resize((NW * SC, NH * SC), Image.NEAREST).tobytes())
             cut = False
@@ -396,12 +452,19 @@ def make_audio(tag):
                     tt = st + (14 + k * 16 + (14 if k == n - 1 else 0)) / FPS
                     for j in range(4): mix(buf, tone(NOTE(90 - j), .02, .05, "sq", 30), tt + j * .05)
                     mix(buf, tone(NOTE(72 + (k * 2 if k < n - 1 else 12)), .14, .08, "sq", 6), tt + .27)
-            elif "slope" in sg:
-                for k, m in enumerate([67, 71, 74]): mix(buf, tone(NOTE(m), .18, .06, "tri", 3), st + .2 + k * .4)
+            elif "compare" in sg:
+                for i in range(len(sg["compare"][1])):
+                    t0 = st + (12 + i * 55) / FPS
+                    for k in range(10): mix(buf, tone(NOTE(84), .015, .045, "sq", 40), t0 + k * 40 / FPS / 10)
+                    mix(buf, tone(NOTE(76 + i * 5), .2, .08, "sq", 5), t0 + 40 / FPS)
             elif sg.get("outro"):
                 for m, t, du in MOTIF: mix(buf, tone(NOTE(m), du * 1.2, .10, "tri", 1.5), st + .3 + t)
             else:
-                if sg.get("text") or sg.get("note"): mix(buf, tone(NOTE(76), .08, .07, "sq", 10), st + .1)
+                if sg.get("note") or sg.get("text"):
+                    for i in range(len(sg.get("note") or sg.get("text"))): mix(buf, tone(NOTE(76 + i * 2), .07, .06, "sq", 10), st + (6 + i * 20) / FPS)
+                for c in sg.get("call", ()): mix(buf, tone(NOTE(81), .06, .07, "sq", 12), st + c[0] / FPS); mix(buf, tone(NOTE(88), .05, .05, "sq", 12), st + c[0] / FPS + .06)
+                if sg.get("fire"):
+                    nz = np.random.default_rng(5).uniform(-1, 1, int(SR * F / FPS)) * .03; mix(buf, nz, st + .4)
                 if sg.get("rain"):
                     nz = np.convolve(np.random.default_rng(3).uniform(-1, 1, int(SR * F / FPS)), np.ones(8) / 8, mode="same") * .06 * sg["rain"]
                     mix(buf, nz, st)

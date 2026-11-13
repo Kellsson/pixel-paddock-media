@@ -15,15 +15,15 @@ Sources:
 
 | On screen | Sources |
 |---|---|
-| Double world champion, never won at home | F1F, WP |
+| 2 world titles (1988, 1990), 0 home wins before this race | F1F, WP |
 | Grid P1 Senna, P2 Patrese, P3 Mansell, P4 Berger, P5 Alesi, P6 Prost, P7 Piquet | WP, GPC |
 | Fire on Berger's McLaren before the start | GPC, FAN |
 | Senna leads, Mansell up to 2nd | WP, GPC |
 | Mansell closes on Senna around lap 20 | WP, GPC |
-| Mansell stop: gearbox won't find 1st, about 6 s stop takes 14 s | FAN (6 to 14 s, 1st gear), WP (over 14 s), GPC ("fished for gears") |
+| Mansell stop: no 1st gear, usual 6 s stop takes 14 s (so 8 s lost) | FAN (6 to 14 s, 1st gear), WP (over 14 s), GPC ("fished for gears") |
 | Lap 50: puncture, Mansell pits again | WP, GPC |
 | Mansell out with gearbox failure, spins, after 59 laps | F1 (59 laps), GPC, SEN, FAN |
-| Senna loses 4th, then 3rd and 5th | WP, FAN (4th first) |
+| Senna loses 4th, then 3rd and 5th (shown together) | WP, FAN (4th first) |
 | Last 7 laps in 6th only | GPC, SEN |
 | Late rain | GPC, SEN, FAN |
 | Patrese closes in, his gearbox failing too | WP, GPC, FAN |
