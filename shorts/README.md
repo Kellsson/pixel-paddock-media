@@ -4,8 +4,8 @@ YouTube Shorts (v2): top-down pixel cars on the real track layout, told chronolo
 
 | Race | Video | Contact sheet |
 |---|---|---|
-| Brazil 1991, Interlagos (Senna, 71 laps, 73 s) | [1991_interlagos/recap.mp4](1991_interlagos/recap.mp4) | [sheet.png](1991_interlagos/sheet.png) |
-| Japan 2005, Suzuka (Räikkönen, 53 laps, 68 s) | [2005_suzuka/recap.mp4](2005_suzuka/recap.mp4) | [sheet.png](2005_suzuka/sheet.png) |
+| Brazil 1991, Interlagos (Senna, 71 laps, 75 s) | [1991_interlagos/recap.mp4](1991_interlagos/recap.mp4) | [sheet.png](1991_interlagos/sheet.png) |
+| Japan 2005, Suzuka (Räikkönen, 53 laps, 70 s) | [2005_suzuka/recap.mp4](2005_suzuka/recap.mp4) | [sheet.png](2005_suzuka/sheet.png) |
 
 Raw URLs (e.g. for Buffer):
 - https://raw.githubusercontent.com/Kellsson/pixel-paddock-media/main/shorts/1991_interlagos/recap.mp4
@@ -13,6 +13,7 @@ Raw URLs (e.g. for Buffer):
 
 ## Status
 v5 (13 Nov 2026): real-world sizing. Each race sets track_m (below the closest gap between two separate track sections, so parts never merge) and car_m (= track_m / 1.25). Zoom only changes how big it looks. Grid facts sit in a header panel with blinking highlights instead of a box over the grid. Safety car is a banner in the top bar. Spins only slide just off the edge.
+v5.1: track drawn as one continuous band from a distance field (no notches or gaps at joints); outro holds 5 s.
 
 ## Engine
 - `engine/map_recap.py`

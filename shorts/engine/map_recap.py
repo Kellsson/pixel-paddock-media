@@ -122,13 +122,36 @@ def zoom_for(R, px):
     """zoom at which a car is px logical pixels long"""
     tr = Track(R["geo"], rot=R.get("rot", 0)); return px / (R["car_m"] * tr.fit)
 
+_GX, _GY = np.meshgrid(np.arange(NW) + .5, np.arange(NH) + .5)
+_MAP_CACHE = {}
+def track_dist(tr, cam, w):
+    """Distance (logical px) from every screen pixel to the track centre line. One continuous band,
+    no joints, so the asphalt never shows notches or gaps."""
+    key = (id(tr), round(cam[0], 2), round(cam[1], 2), round(cam[2], 4))
+    if key in _MAP_CACHE: return _MAP_CACHE[key]
+    P = np.array([project(tr, cam, p) for p in tr.pts] + [project(tr, cam, tr.pts[0])])
+    A, B = P[:-1], P[1:]; m = w / 2 + 3
+    keep = ~((np.maximum(A[:, 0], B[:, 0]) < -m) | (np.minimum(A[:, 0], B[:, 0]) > NW + m) |
+             (np.maximum(A[:, 1], B[:, 1]) < -m) | (np.minimum(A[:, 1], B[:, 1]) > NH + m))
+    A, B = A[keep], B[keep]; D = np.full((NH, NW), 1e9)
+    gx, gy = _GX[..., None], _GY[..., None]
+    for i in range(0, len(A), 48):
+        a_, b_ = A[i:i + 48], B[i:i + 48]; ab = b_ - a_; L2 = np.maximum((ab ** 2).sum(1), 1e-9)
+        t = np.clip(((gx - a_[:, 0]) * ab[:, 0] + (gy - a_[:, 1]) * ab[:, 1]) / L2, 0, 1)
+        dx = gx - (a_[:, 0] + t * ab[:, 0]); dy = gy - (a_[:, 1] + t * ab[:, 1])
+        D = np.minimum(D, np.sqrt(dx * dx + dy * dy).min(-1))
+    if len(_MAP_CACHE) > 400: _MAP_CACHE.clear()
+    _MAP_CACHE[key] = D
+    return D
+
 def draw_map(im, tr, cam, start_frac=0.0, sc_on=False, dim=1.0):
-    d = ImageDraw.Draw(im); z = cam[2]
-    P = [project(tr, cam, p) for p in tr.pts] + [project(tr, cam, tr.pts[0])]
-    w = track_w(z)
+    z = cam[2]; w = track_w(z)
     c = lambda col: tuple(int(v * dim + BG[i] * (1 - dim)) for i, v in enumerate(col))
-    d.line(P, fill=c((60, 68, 92)), width=w + 2, joint="curve"); d.line(P, fill=c((38, 42, 54) if not sc_on else (70, 62, 20)), width=w, joint="curve")
-    d.line(P, fill=c((48, 54, 70)), width=1)
+    D = track_dist(tr, cam, w); a = np.asarray(im).copy()
+    a[D <= w / 2 + 1] = c((60, 68, 92))
+    a[D <= w / 2] = c((38, 42, 54) if not sc_on else (70, 62, 20))
+    if w >= 6: a[D <= .55] = c((48, 54, 70))
+    im.paste(Image.fromarray(a)); d = ImageDraw.Draw(im)
     x, y = project(tr, cam, tr.at(start_frac)); h = tr.heading(start_frac) + math.pi / 2
     for k in range(-w // 2 - 1, w // 2 + 2):
         d.point((x + math.cos(h) * k, y + math.sin(h) * k), fill=c(INK) if k % 2 else (20, 20, 20))
