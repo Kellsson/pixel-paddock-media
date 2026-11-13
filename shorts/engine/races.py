@@ -66,7 +66,7 @@ R91 = dict(geo=f"{HERE}/geo/br.geojson", laps=71, start_frac=0.0, track_m=28, ca
              labels=("SEN", "PAT"), win=True,
              call=[(20, "SEN", [("SENNA WINS", GRN, 2)], "up"), (90, "PAT", [("+2.991 S", YEL, 2)], "up")]),
         dict(frames=95, note=[("CRAMPS", YEL, 2), ("SENNA IS LIFTED", INK, 2), ("FROM THE CAR", INK, 2)]),
-        dict(frames=180, board=("FINAL CLASSIFICATION", None, ["FIRST WIN AT HOME", "FASTEST LAP: MANSELL"])),
+        dict(frames=170, board=("RESULT", None, ["1ST HOME WIN", "FASTEST LAP: MANSELL"])),
         dict(frames=150, outro=True, text=[("F1 HISTORY", GRN, 2), ("BRAZIL 1991", INK, 2), ("WON IN 6TH GEAR", YEL, 2)]),
     ])
 R91["audio"] = make_audio("map91")
@@ -116,7 +116,7 @@ R05 = dict(geo=f"{HERE}/geo/jp.geojson", laps=53, start_frac=0.0, rot=-120, trac
              call=[(15, "RAI", [("LAST LAP", YEL, 2)], "up"), (110, "RAI", [("OUTSIDE PASS", INK, 2), ("FOR THE LEAD", GRN, 2)], "up")]),
         dict(frames=175, laps=(52.93, 53.0), linear=False, cam=("car", "RAI", 2.4, 0, -28), labels=("RAI", "FIS"), hide=("RSC", "MSC", "ALO"), set={"RAI": 0, "FIS": 180}, pos={"RAI": 1, "FIS": 2}, win=True,
              call=[(20, "RAI", [("RAIKKONEN", GRN, 2), ("WINS", GRN, 2)], "up"), (90, "FIS", [("+1.633 S", YEL, 2)], "down")]),
-        dict(frames=180, board=("FINAL CLASSIFICATION", None, ["17TH TO 1ST", "FASTEST LAP: RAIKKONEN"])),
+        dict(frames=170, board=("RESULT", None, ["17TH TO 1ST", "FASTEST LAP: RAIKKONEN"])),
         dict(frames=150, outro=True, text=[("F1 HISTORY", GRN, 2), ("JAPAN 2005", INK, 2), ("17TH TO 1ST", YEL, 2)]),
     ])
 R05["audio"] = make_audio("map05")

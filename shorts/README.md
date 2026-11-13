@@ -1,6 +1,6 @@
 # Historic race recap shorts (map replay)
 
-YouTube Shorts (v2): top-down pixel cars on the real track layout, told chronologically. Time skips are full-screen LAP XX / YY cards; inside a scene the cars move at a believable speed. Lap counter and leader sit in a compact strip at the top. The bottom and right edge stay free for the YouTube overlay. Ends with an animated timing board. Every on-screen fact is listed with sources in [SOURCES.md](SOURCES.md).
+YouTube Shorts (v2): top-down pixel cars on the real track layout, told chronologically. Time skips are full-screen LAP XX / YY cards; inside a scene the cars move at a believable speed. Lap counter and leader sit in a compact strip at the top. The bottom and right edge stay free for the YouTube overlay. Ends with an animated podium result (top 3 cars on the steps, P4-P6 list, one key note, confetti). Every on-screen fact is listed with sources in [SOURCES.md](SOURCES.md).
 
 | Race | Video | Contact sheet |
 |---|---|---|
@@ -13,6 +13,7 @@ Raw URLs (e.g. for Buffer):
 
 ## Status
 v5 (13 Nov 2026): real-world sizing. Each race sets track_m (below the closest gap between two separate track sections, so parts never merge) and car_m (= track_m / 1.25). Zoom only changes how big it looks. Grid facts sit in a header panel with blinking highlights instead of a box over the grid. Safety car is a banner in the top bar. Spins only slide just off the edge.
+v5.2: podium result instead of the green timing board.
 v5.1: track drawn as one continuous band from a distance field (no notches or gaps at joints); outro holds 5 s.
 
 ## Engine

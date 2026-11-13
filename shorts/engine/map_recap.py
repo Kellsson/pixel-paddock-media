@@ -397,6 +397,55 @@ def apply_calls(im, sg, fr, anchors, avoid=(), where=("", 0)):
     elif sg.get("head") is None and False: pass
     return im
 
+PODIUM_T = {3: 10, 2: 22, 1: 36}          # frame each podium step rises
+ROWS_T0, ROWS_STEP, EXTRA_T0 = 60, 9, 92
+def podium_board(im, tr, title, rows, extra, fr):
+    """Final result: podium with the top-3 cars, then P4-P6 as a compact list, then one or two notes.
+    rows: (pos, name, team, gap, grid). extra: [note1 (big, yellow), note2 (small)]."""
+    draw_map(im, tr, (tr.cx, tr.cy, 1.0), dim=.22)
+    im = shade(im, (0, 0, NW, NH), .55); d = ImageDraw.Draw(im)
+    if fr > PODIUM_T[1] + 18:                                  # confetti in the winner's colours
+        rr = np.random.default_rng(7); cols = [YEL, team_col(rows[0][2]), INK]
+        for k in range(40):
+            x0 = rr.uniform(0, NW); sp = rr.uniform(.6, 1.4); ph = rr.uniform(0, 200)
+            y = (ph + (fr - PODIUM_T[1] - 18) * sp) % 200 + 20
+            if y < 150 and not (40 <= y <= 46): d.rectangle([x0 + math.sin(y / 9 + k) * 3, y, x0 + math.sin(y / 9 + k) * 3 + 1, y], fill=cols[k % 3])
+    tx(d, CX - tw(title, 2) // 2, 26, title, INK, 2)
+    for i in range(0, NW, 3):                                   # chequered strip
+        for j in range(2): d.rectangle([i, 40 + j * 3, i + 2, 42 + j * 3], fill=INK if (i // 3 + j) % 2 == 0 else (30, 34, 48))
+    steps = {2: (CX - 52, 88), 1: (CX - 17, 78), 3: (CX + 18, 94)}   # x0, top
+    bottom = 108
+    for p in (3, 2, 1):
+        t0 = PODIUM_T[p]
+        if fr < t0: continue
+        k = ease(min(1, (fr - t0) / 10)); x0, top = steps[p]; top_k = int(lerp(bottom, top, k))
+        _, name, team, gap, grid = rows[p - 1]
+        d.rectangle([x0, top_k, x0 + 34, bottom], fill=(30, 34, 48), outline=EDGE)
+        d.rectangle([x0, top_k, x0 + 34, top_k + 1], fill=YEL if p == 1 else (150, 160, 180) if p == 2 else (176, 120, 70))
+        if k >= 1:
+            tx(d, x0 + 17 - tw(str(p), 2) // 2, top + 6, str(p), YEL if p == 1 else INK, 2)
+            drop = ease(min(1, (fr - t0 - 10) / 8)); cy = lerp(top - 40, top - 11, drop)
+            draw_car(d, x0 + 17, cy, -math.pi / 2, team, 15)
+            if drop >= 1:
+                code = name.replace(". ", "")[:3] if "." not in name else name.split()[-1][:3]
+                tx(d, x0 + 17 - tw(code) // 2, top - 26, code, YEL if p == 1 else INK)
+                g = "WINNER" if p == 1 else gap
+                tx(d, x0 + 17 - tw(g) // 2, bottom + 3, g, GRN if p == 1 else INK)
+                gl = f"FROM P{grid}"; tx(d, x0 + 17 - tw(gl) // 2, bottom + 10, gl, MUT)
+    for i, (p, name, team, gap, grid) in enumerate(rows[3:6]):
+        t0 = ROWS_T0 + i * ROWS_STEP
+        if fr < t0: continue
+        y = 128 + i * 8; xo = int(lerp(-40, 0, ease(min(1, (fr - t0) / 6))))
+        tx(d, 14 + xo, y, p, MUT); d.rectangle([20 + xo, y, 21 + xo, y + 4], fill=team_col(team))
+        tx(d, 25 + xo, y, name, INK); tx(d, 106 - tw(gap) + xo, y, gap, INK)
+        delta = grid - int(p)
+        if delta: tri(d, 110 + xo, y, delta > 0, GRN if delta > 0 else RED)
+    if fr >= EXTRA_T0 and extra:
+        tx(d, CX - tw(extra[0], 2) // 2, 154, extra[0], YEL, 2)
+    if fr >= EXTRA_T0 + 12 and len(extra) > 1:
+        tx(d, CX - tw(extra[1]) // 2, 167, extra[1], MUT)
+    return im
+
 # ---------------- generic renderer ----------------
 def render(R, name):
     tr = Track(R["geo"], rot=R.get("rot", 0)); L = tr.raw_len
@@ -414,7 +463,7 @@ def render(R, name):
             for fr in range(F):
                 im = Image.new("RGB", (NW, NH), BG)
                 if "jump" in sg: im = lap_card(im, tr, *sg["jump"], R["laps"], fr / max(1, F - 1), sg.get("sub"), marks)
-                elif "board" in sg: im = results_board(im, *sg["board"], fr)
+                elif "board" in sg: im = podium_board(im, tr, *sg["board"], fr)
                 elif "compare" in sg: im = compare_card(im, tr, *sg["compare"][:3], fr, *sg["compare"][3:])
                 elif "note" in sg: im = note_card(im, tr, sg["note"], fr, sg.get("tspeed", 1.2))
                 elif "strategy" in sg: im = strategy_card(im, *sg["strategy"], R["laps"], fr)
@@ -559,11 +608,12 @@ def make_audio(tag):
                 for k in range(8): mix(buf, tone(NOTE(60 + k * 2), .06, .06, "sq", 12), st + k * .09)
                 mix(buf, tone(NOTE(84), .25, .08, "sq", 5), st + .85)
             elif "board" in sg:
-                n = len(sg["board"][1])
-                for k in range(n):
-                    tt = st + (10 + k * 12 + (12 if k == n - 1 else 0)) / FPS
-                    for j in range(4): mix(buf, tone(NOTE(90 - j), .02, .05, "sq", 30), tt + j * .05)
-                    mix(buf, tone(NOTE(72 + (k * 2 if k < n - 1 else 12)), .14, .08, "sq", 6), tt + .27)
+                for p, m in ((3, 67), (2, 71), (1, 74)):
+                    tt = st + PODIUM_T[p] / FPS
+                    for j in range(5): mix(buf, tone(NOTE(m - 12 + j * 3), .03, .05, "sq", 25), tt + j * .05)
+                    mix(buf, tone(NOTE(m + 12), .18 if p > 1 else .6, .09, "sq", 4), tt + 18 / FPS)
+                for i in range(3): mix(buf, tone(NOTE(84), .03, .04, "sq", 30), st + (ROWS_T0 + i * ROWS_STEP) / FPS)
+                mix(buf, tone(NOTE(79), .1, .07, "sq", 8), st + EXTRA_T0 / FPS)
             elif "compare" in sg:
                 for i in range(len(sg["compare"][1])):
                     t0 = st + (10 + i * 40) / FPS
