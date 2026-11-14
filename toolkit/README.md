@@ -21,6 +21,11 @@ make("FP3", rows, "fp3br_reel", gp="SAO PAULO", rookies=("LIN",), insight=["LINE
 - Example: `examples/reel_fp3br.py`.
 - Publish to `reels/YYYY-MM-DD_session/reel.mp4` and post via Buffer as a reel (thumbnailOffset 2700).
 
+## Lap-1 reel (season stats, ~29 s)
+- `reel_lap1.py`: places gained on lap 1 over a season. Data from `data/jolpica_YYYY/` (fetch with `data/fetch_jolpica.py 2026 20`).
+- Scenes: start-light gantry → diverging block chart (1 block = 1 place, pixel cars) → best/worst single start (position ladders) → takeaway → outro.
+- `python3 reel_lap1.py` writes `out_reel/lap1_2026.mp4`.
+
 ## Other
 - `pixcar.py`: side-view car sprites (1991 McLaren/Williams).
 - The map-replay engine for the shorts lives in `../shorts/engine/`.
