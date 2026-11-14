@@ -84,23 +84,23 @@ def make(out_name="lap1_2026", year=2026, rounds=20, takeaway=None):
     mer = [i for i, r in enumerate(rows) if r[1] == "Mercedes"]
     mer_sum = sum(rows[i][2] for i in mer)
     # ---- timeline (frames @30fps) ----
-    IN = dict(f1=0, lap=14, kings=28, after=52, q1=76, q2=84); INTRO = 140
+    IN = dict(f1=0, lap=0, kings=8, after=22, bars=40, q1=88, q2=100); INTRO = 165
     T = {}; t = INTRO + 12
     for i in range(N - 1, -1, -1):
         if i in tie: continue
         T[i] = t; t += 9 if i > 3 else 20
     for i in tie: T[i] = t
     TOP_HIT = t
-    HL1 = TOP_HIT + 30; HL2 = HL1 + 80; CH_END = HL2 + 95
+    HL1 = TOP_HIT + 30; HL2 = HL1 + 125; CH_END = HL2 + 140
     CARD = [CH_END, CH_END + 165]; CARD_END = CARD[1] + 165
     TK0 = CARD_END; TK_END = TK0 + 110 if takeaway else TK0
     OUT0 = TK_END; total = OUT0 + 120
 
     # ---- audio ----
     buf = np.zeros(int(SR * total / FPS) + SR)
-    for k, t0 in enumerate(IN.values()):
-        if k < 4: mix(buf, noise(0.10, 0.18) + tone(110, 0.10, 0.15), t0 / FPS)
-    mel = [("C5", 14, .12), ("E5", 21, .12), ("G5", 28, .25), ("C6", 52, .3), ("G5", 76, .12), ("C6", 84, .4)]
+    for t0 in (0, IN["kings"], IN["after"], IN["q1"], IN["q2"]): mix(buf, noise(0.10, 0.18) + tone(110, 0.10, 0.15), t0 / FPS)
+    for j in range(6): mix(buf, tone(NOTE[["C5", "D5", "E5", "A4", "E4", "C4"][j]], 0.08, 0.11), (IN["bars"] + j * 6) / FPS)
+    mel = [("C5", 0, .12), ("E5", 8, .12), ("G5", 16, .25), ("C6", 88, .2), ("C4", 100, .4)]
     for nn, f0, du in mel: mix(buf, tone(NOTE[nn], du, 0.1, decay=4), f0 / FPS)
     scale = ["C4", "D4", "E4", "G4", "A4", "C5", "D5", "E5", "G5", "A5", "C6"]
     for k, i in enumerate(sorted(T, key=lambda i: T[i])):
@@ -132,13 +132,32 @@ def make(out_name="lap1_2026", year=2026, rounds=20, takeaway=None):
     for fi in range(total):
         im = BG.copy(); d = ImageDraw.Draw(im)
         if fi < INTRO:
-            slam(im, fi, IN["f1"], 0, 560, "F1", "head", 14, C["ink"], center=True)
-            slam(im, fi, IN["lap"], 0, 810, "LAP 1", "head", 22, GREEN, center=True)
-            slam(im, fi, IN["kings"], 0, 980, "KINGS", "head", 14, C["ink"], center=True)
-            slam(im, fi, IN["after"], 0, 1110, f"AFTER {rounds} OF {total_rounds} RACES · {year}", "label", 6, C["mute"], center=True)
-            slam(im, fi, IN["q1"], 0, 1330, "WHO GAINS THE MOST", "head", 5, C["ink"], center=True)
-            slam(im, fi, IN["q2"], 0, 1410, "PLACES OFF THE START?", "head", 5, GREEN, center=True)
-            if fi == 115: snaps["intro"] = im.copy(); im.save(f"{OUT}/{out_name}_cover.png")
+            big(im, (W - width("F1 LAP 1", "head", 14)) // 2, 430, "F1 LAP 1", "head", 14, GREEN)      # first frame already says it
+            slam(im, fi, IN["kings"], 0, 590, "KINGS", "head", 14, C["ink"], center=True)
+            def fit(t, f, sc):
+                while width(t, f, sc) > W - 100: sc -= 1
+                return sc
+            l1_, l2_ = "EVERY PLACE GAINED OR LOST ON LAP 1,", f"ADDED UP OVER {rounds} OF {total_rounds} RACES · {year}"
+            slam(im, fi, IN["after"], 0, 700, l1_, "label", fit(l1_, "label", 5), C["ink"], center=True)
+            slam(im, fi, IN["after"] + 6, 0, 750, l2_, "label", fit(l2_, "label", 5), C["mute"], center=True)
+            # mystery chart teaser
+            TEASE = [rows[0][2], rows[3][2], rows[11][2], -8, rows[-4][2], rows[-1][2]]
+            AXt, BT = W // 2, 9
+            R(d, AXt - 1, 850, AXt + 2, 850 + 6 * 56, C["rule"])
+            for j, v in enumerate(TEASE):
+                t0 = IN["bars"] + j * 6
+                if fi < t0: continue
+                y = 860 + j * 56; nb = min(abs(v), int(abs(v) * min(1, (fi - t0) / 14)) + 1)
+                col = GREEN if v > 0 else NEG
+                for b in range(nb):
+                    bx = AXt + 4 + b * BT if v > 0 else AXt - 4 - (b + 1) * BT
+                    R(d, bx, y + 8, bx + BT - 2, y + 36, col)
+                if v > 0: big(im, AXt - 24, y + 38, "???", "head", 4, C["mute"], right=True)
+                else: big(im, AXt + 24, y + 38, "???", "head", 4, C["mute"])
+            q1 = f"TOP SCORE: +{rows[0][2]} PLACES. WHO?"; q2 = "THE CHAMPIONS? DEEP IN THE RED."
+            slam(im, fi, IN["q1"], 0, 1290, q1, "head", fit(q1, "head", 5), GREEN, center=True)
+            slam(im, fi, IN["q2"], 0, 1370, q2, "head", fit(q2, "head", 5), NEG, center=True)
+            if fi == 140: snaps["intro"] = im.copy(); im.save(f"{OUT}/{out_name}_cover.png")
         elif fi < CH_END:
             big(im, 40, 300, "F1 LAP 1 KINGS", "head", 8, C["ink"])
             big(im, 40, 360, f"PLACES GAINED · AFTER {rounds} OF {total_rounds} RACES", "label", 5, C["mute"])
@@ -257,4 +276,4 @@ def make(out_name="lap1_2026", year=2026, rounds=20, takeaway=None):
 if __name__ == "__main__":
     rows, _, _ = load()
     mer = sum(r[2] for r in rows if r[1] == "Mercedes")
-    make(takeaway=[f"{mer:+d}", "MERCEDES ON LAP 1", "STILL WON THE TITLE"])
+    make()
