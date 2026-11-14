@@ -84,7 +84,7 @@ def make(out_name="lap1_2026", year=2026, rounds=20, takeaway=None):
     mer = [i for i, r in enumerate(rows) if r[1] == "Mercedes"]
     mer_sum = sum(rows[i][2] for i in mer)
     # ---- timeline (frames @30fps) ----
-    IN = dict(f1=0, lap=0, kings=8, after=22, bars=40, q1=88, q2=100); INTRO = 165
+    IN = dict(kings=8, total=26, races=44); INTRO = 100
     T = {}; t = INTRO + 12
     for i in range(N - 1, -1, -1):
         if i in tie: continue
@@ -98,9 +98,8 @@ def make(out_name="lap1_2026", year=2026, rounds=20, takeaway=None):
 
     # ---- audio ----
     buf = np.zeros(int(SR * total / FPS) + SR)
-    for t0 in (0, IN["kings"], IN["after"], IN["q1"], IN["q2"]): mix(buf, noise(0.10, 0.18) + tone(110, 0.10, 0.15), t0 / FPS)
-    for j in range(6): mix(buf, tone(NOTE[["C5", "D5", "E5", "A4", "E4", "C4"][j]], 0.08, 0.11), (IN["bars"] + j * 6) / FPS)
-    mel = [("C5", 0, .12), ("E5", 8, .12), ("G5", 16, .25), ("C6", 88, .2), ("C4", 100, .4)]
+    for t0 in (0, IN["kings"], IN["total"], IN["races"]): mix(buf, noise(0.10, 0.18) + tone(110, 0.10, 0.15), t0 / FPS)
+    mel = [("C5", 0, .12), ("E5", 8, .12), ("G5", 26, .2), ("C6", 44, .4)]
     for nn, f0, du in mel: mix(buf, tone(NOTE[nn], du, 0.1, decay=4), f0 / FPS)
     scale = ["C4", "D4", "E4", "G4", "A4", "C5", "D5", "E5", "G5", "A5", "C6"]
     for k, i in enumerate(sorted(T, key=lambda i: T[i])):
@@ -132,35 +131,19 @@ def make(out_name="lap1_2026", year=2026, rounds=20, takeaway=None):
     for fi in range(total):
         im = BG.copy(); d = ImageDraw.Draw(im)
         if fi < INTRO:
-            big(im, (W - width("F1 LAP 1", "head", 14)) // 2, 430, "F1 LAP 1", "head", 14, GREEN)      # first frame already says it
-            slam(im, fi, IN["kings"], 0, 590, "KINGS", "head", 14, C["ink"], center=True)
-            def fit(t, f, sc):
-                while width(t, f, sc) > W - 100: sc -= 1
+            def fit(t, f, sc, maxw=W - 100):
+                while width(t, f, sc) > maxw: sc -= 1
                 return sc
-            l1_, l2_ = "EVERY PLACE GAINED OR LOST ON LAP 1,", f"ADDED UP OVER {rounds} OF {total_rounds} RACES · {year}"
-            slam(im, fi, IN["after"], 0, 700, l1_, "label", fit(l1_, "label", 5), C["ink"], center=True)
-            slam(im, fi, IN["after"] + 6, 0, 750, l2_, "label", fit(l2_, "label", 5), C["mute"], center=True)
-            # mystery chart teaser
-            TEASE = [rows[0][2], rows[3][2], rows[11][2], -8, rows[-4][2], rows[-1][2]]
-            AXt, BT = W // 2, 9
-            R(d, AXt - 1, 850, AXt + 2, 850 + 6 * 56, C["rule"])
-            for j, v in enumerate(TEASE):
-                t0 = IN["bars"] + j * 6
-                if fi < t0: continue
-                y = 860 + j * 56; nb = min(abs(v), int(abs(v) * min(1, (fi - t0) / 14)) + 1)
-                col = GREEN if v > 0 else NEG
-                for b in range(nb):
-                    bx = AXt + 4 + b * BT if v > 0 else AXt - 4 - (b + 1) * BT
-                    R(d, bx, y + 8, bx + BT - 2, y + 36, col)
-                if v > 0: big(im, AXt - 24, y + 38, "???", "head", 4, C["mute"], right=True)
-                else: big(im, AXt + 24, y + 38, "???", "head", 4, C["mute"])
-            q1 = f"TOP SCORE: +{rows[0][2]} PLACES. WHO?"; q2 = "THE CHAMPIONS? DEEP IN THE RED."
-            slam(im, fi, IN["q1"], 0, 1290, q1, "head", fit(q1, "head", 5), GREEN, center=True)
-            slam(im, fi, IN["q2"], 0, 1370, q2, "head", fit(q2, "head", 5), NEG, center=True)
+            big(im, (W - width("F1 LAP 1", "head", 14)) // 2, 720, "F1 LAP 1", "head", 14, GREEN)      # first frame already says it
+            slam(im, fi, IN["kings"], 0, 880, "KINGS", "head", 14, C["ink"], center=True)
+            slam(im, fi, IN["total"], 0, 1040, "SEASON TOTAL", "head", 7, C["ink"], center=True)
+            slam(im, fi, IN["total"] + 6, 0, 1120, "PLACES GAINED OR LOST", "head", fit("PLACES GAINED OR LOST", "head", 6), C["mute"], center=True)
+            slam(im, fi, IN["races"], 0, 1210, f"{year} · {rounds} OF {total_rounds} RACES", "label", 6, C["mute"], center=True)
+            if fi == INTRO - 10: snaps["intro"] = im.copy(); im.save(f"{OUT}/{out_name}_cover.png")
             if fi == 140: snaps["intro"] = im.copy(); im.save(f"{OUT}/{out_name}_cover.png")
         elif fi < CH_END:
             big(im, 40, 300, "F1 LAP 1 KINGS", "head", 8, C["ink"])
-            big(im, 40, 360, f"PLACES GAINED · AFTER {rounds} OF {total_rounds} RACES", "label", 5, C["mute"])
+            big(im, 40, 360, f"SEASON TOTAL · {rounds} OF {total_rounds} RACES", "label", 6, C["mute"])
             R(d, 40, 390, W - 40, 400, C["ink"])
             R(d, AX - 1, TOPY - 20, AX + 2, TOPY + N * ROW, C["rule"])
             big(im, AX + 14, TOPY - 26, "GAINED >", "label", 4, GREEN)
@@ -185,26 +168,36 @@ def make(out_name="lap1_2026", year=2026, rounds=20, takeaway=None):
                     else: big(im, tip - 14, y + 40, f"{v:+d}", "head", 4, col, right=True)
             big(im, 40, TOPY + N * ROW + 60, "1 BLOCK = 1 PLACE · MIN. 10 STARTS", "label", 5, C["mute"])
             big(im, 40, TOPY + N * ROW + 105, "LAP-1 RETIREMENTS NOT COUNTED · DATA: JOLPICA", "label", 4, C["mute"])
-            # --- highlights: dim the rest, frame the rows, caption replaces the subtitle ---
+            # --- highlights: dim the rest, frame the rows, big callout box overlaid next to them ---
             hl = None
             if HL1 <= fi < HL2:
-                names = " & ".join(NAMES[rows[i][0]] for i in tie)
-                hl = (tie, GREEN, f"KINGS: {names}, +{rows[0][2]} EACH")
+                names = " + ".join(NAMES[rows[i][0]] for i in tie) if len(tie) > 1 else NAMES[rows[0][0]]
+                y0 = TOPY + (max(tie) + 1) * ROW + 10
+                hl = (tie, GREEN, HL1, ("LAP 1 KINGS", f"+{rows[0][2]} EACH" if len(tie) > 1 else f"+{rows[0][2]}"), (40, y0, AX - 20, y0 + 160), "up")
             elif HL2 <= fi < CH_END:
-                hl = (mer, NEG, f"THE CHAMPIONS: MERCEDES, {mer_sum:+d} COMBINED")
+                y1 = TOPY + min(mer) * ROW - 10
+                hl = (mer, NEG, HL2, ("CHAMPIONS", f"{mer_sum:+d} COMBINED"), (AX + 20, y1 - 160, W - 40, y1), "down")
             if hl:
-                idx, hc, cap = hl
+                idx, hc, h0, lines, (bx0, by0, bx1, by1), ptr = hl
                 for i in range(N):
                     if i not in idx: dim(im, TOPY + i * ROW, TOPY + (i + 1) * ROW)
                 d = ImageDraw.Draw(im)
-                R(d, 40, 318, W - 40, 378, C["paper"])
-                if (fi - (HL1 if hc == GREEN else HL2)) >= 6:
+                if fi >= h0 + 6:
                     if max(idx) - min(idx) + 1 == len(idx): frame_rows(d, TOPY + min(idx) * ROW, TOPY + (max(idx) + 1) * ROW, hc)
                     else:
                         for i in idx: frame_rows(d, TOPY + i * ROW, TOPY + (i + 1) * ROW, hc)
-                    sc = 6
-                    while width(cap, "label", sc) > W - 80: sc -= 1
-                    big(im, 40, 362, cap, "label", sc, hc)
+                if fi >= h0 + 14:
+                    u = min(1, (fi - h0 - 14) / 5); dy = int((1 - u) * 30) * (1 if ptr == "up" else -1)
+                    R(d, bx0, by0 + dy, bx1, by1 + dy, hc)
+                    px_ = (bx0 + bx1) // 2
+                    for k in range(4):                                   # pixel pointer towards the rows
+                        if ptr == "up": R(d, px_ - 8 * (k + 1), by0 + dy - 8 * (4 - k), px_ + 8 * (k + 1), by0 + dy - 8 * (3 - k), hc)
+                        else: R(d, px_ - 8 * (k + 1), by1 + dy + 8 * (3 - k), px_ + 8 * (k + 1), by1 + dy + 8 * (4 - k), hc)
+                    maxw = bx1 - bx0 - 40
+                    for j, ln in enumerate(lines):
+                        sc = 6
+                        while width(ln, "head", sc) > maxw: sc -= 1
+                        big(im, (bx0 + bx1 - width(ln, "head", sc)) // 2, by0 + dy + 66 + j * 72, ln, "head", sc, C["paper"])
             if TOP_HIT <= fi < TOP_HIT + 8:
                 off = [6, -6, 4, -4, 3, -2, 1, 0][fi - TOP_HIT]
                 im = im.transform(im.size, Image.AFFINE, (1, 0, off, 0, 1, 0), fillcolor=C["paper"])
