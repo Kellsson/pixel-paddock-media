@@ -64,3 +64,14 @@ Left out: Villeneuve's penalty and Raikkonen's engine-change grid penalty (sourc
 ## Visual licence
 - Car sizes and gaps between cars are exaggerated so the cars are readable; real gaps would be a few pixels.
 - Liveries are plain researched team colours. Teams not researched (Benetton 1991, BAR, Red Bull, Sauber 2005) are drawn grey.
+
+## Track tour Las Vegas (reels/2026-11-19_vegas-track-tour)
+- Layout: bacinger/f1-circuits us-2023 (MIT), 6,202 m line ≈ 6.201 km official; anticlockwise. 50 laps, 6.201 km: F1.com event page 2026. 17 turns: Williams "In Numbers: 10 Vegas Statistics".
+- T1 2023 Verstappen forces Leclerc wide, 5 s penalty, still wins: Autosport race report; RaceFans "Verstappen overcomes penalty and damage"; Crash.net.
+- T1 2025 Norris brakes too late, runs wide, Verstappen leads: Motorsport Magazine; Wikipedia 2025 Las Vegas GP.
+- Sphere world's largest spherical structure: Las Vegas Review-Journal "Sphere by the numbers"; IFLScience; KEYT/CNN. (Height left out: one source only.)
+- Strip 1.9 km flat out, ~350 km/h: Williams (T12–T14, 1.9 km, 350 km/h); f1da "nearly 2 km, close to 350 km/h".
+- 2024 Verstappen P5, clinches 4th title: Sky Sports; TNT Sports.
+- 2025 both McLarens disqualified (plank wear): RACER; Autosport; NBC.
+- FP1 2023 red flag after 9 min, Sainz drain/water valve cover: CBS News ("nine minutes"); F1.com ("less than 10 minutes"). Exact location not pinned on the map (not in sources).
+- Left out: 2023 overtake count (82 vs 99, sources disagree).
