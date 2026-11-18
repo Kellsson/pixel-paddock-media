@@ -5,23 +5,29 @@ exec(open(os.path.join(os.path.dirname(os.path.abspath(__file__)),"post_fri.py")
 # Las Vegas GP 2026 preview. Times: F1.com (Las Vegas = UTC-8). History: Jolpica circuits/vegas.
 PINK = hx("#ff3d9a")
 
-# --- stylised Strip Circuit (anticlockwise; north up). Schematic, not to scale.
-TRACK = [(150,92),(120,92),(70,92),(58,92),(52,88),(56,84),(48,80),(48,40),(48,24),(56,17),(70,16),(122,16),
-         (132,15),(142,19),(146,27),(140,34),(138,40),(138,78),(144,82),(156,84),(158,89),(150,92)]
-def draw_track(d, col=INK, w=2):
-    for (x0,y0),(x1,y1) in zip(TRACK, TRACK[1:]):
-        d.line([(x0,y0),(x1,y1)], fill=col, width=w)
+# --- Las Vegas Strip Circuit, real geometry: bacinger/f1-circuits us-2023 (MIT, see geo/lic.txt). North up.
+import json as _json, math as _math
+_C=_json.load(open(os.path.join(HERE,"..","geo","lv.geojson")))["features"][0]["geometry"]["coordinates"]
+def _proj(lo,la, s=80/1960, x0=None):
+    k=_math.cos(_math.radians(36.1167))*111320
+    return ((lo+115.1667)*k*s+100, (36.1255-la)*110540*s+16)
+TRACK=[_proj(lo,la) for lo,la in _C]
+STRIP=set(i for i,(lo,la) in enumerate(_C) if lo<-115.1705)
+SPHERE=_proj(-115.1621,36.1206)
+def draw_track(d, col=INK, w=2, strip=None):
+    for i in range(len(TRACK)-1):
+        c_ = strip if (strip and i in STRIP and i+1 in STRIP) else col
+        d.line([TRACK[i],TRACK[i+1]], fill=c_, width=w)
 
 def s_track():
     im = Image.new("RGB",(200,120),BG); d=ImageDraw.Draw(im)
     tx(d,6,4,"LAS VEGAS STRIP CIRCUIT",INK)
-    draw_track(d, SL, 4); draw_track(d, INK, 2)
-    d.line([(48,32),(48,72)], fill=PINK, width=2)           # the Strip
-    tx(d,8,50,"THE",PINK); tx(d,4,58,"STRIP",PINK)
-    d.ellipse([150,14,162,26], outline=GREEN); tx(d,166,17,"SPHERE",MUT)
-    r(d,134,90,136,95,GREEN); tx(d,104,98,"START",GREEN)  # start line
-    tx(d,166,86,"PIT",MUT)
-    tx(d,60,60,"6.201 KM",INK); tx(d,60,68,"50 LAPS",MUT); tx(d,60,76,"ANTICLOCKWISE",MUT)
+    draw_track(d, SL, 4); draw_track(d, INK, 2, strip=PINK)
+    xs=[TRACK[i][0] for i in STRIP]; ys=[TRACK[i][1] for i in STRIP]
+    tx(d,int(min(xs))-30,int(sum(ys)/len(ys))-6,"THE",PINK); tx(d,int(min(xs))-34,int(sum(ys)/len(ys))+2,"STRIP",PINK)
+    sx,sy=SPHERE; d.ellipse([sx-4,sy-4,sx+4,sy+4], outline=GREEN); d.line([(sx+5,sy),(sx+14,sy)],fill=GREEN); tx(d,int(sx)+16,int(sy)-2,"SPHERE",MUT)
+    px,py=TRACK[0]; r(d,int(px)-1,int(py)-1,int(px)+2,int(py)+2,GREEN); d.line([(px+3,py+1),(px+14,py+8)],fill=GREEN); tx(d,int(px)+16,int(py)+6,"START",GREEN)
+    tx(d,140,60,"6.201 KM",INK); tx(d,140,68,"50 LAPS",MUT); tx(d,140,76,"ANTI-",MUT); tx(d,140,84,"CLOCKWISE",MUT)
     calm(d); return im
 
 def s_race_tz():
@@ -88,14 +94,14 @@ def slide(k, head, scene, figt, bod, foot, name):
     body(im, y + 95, bod)
     footer(im, d, k, foot); im.save(f"{OUT}/{name}.png")
 
-slide(1,"LAS VEGAS: 50 NIGHT LAPS OF THE 6.201 KM STRIP CIRCUIT",s_track,"Las Vegas Strip Circuit, schematic.","Round 21 of 23, the first of three to go.","SWIPE >>>","1_1")
+slide(1,"LAS VEGAS: 50 NIGHT LAPS OF THE 6.201 KM STRIP CIRCUIT",s_track,"Las Vegas Strip Circuit, north up.","Round 21 of 23, the first of three to go.","SWIPE >>>","1_1")
 slide(2,"LIGHTS OUT SAT 20:00 LOCAL, SUN 04:00 UTC",s_race_tz,"Race start in six time zones.","Saturday night in Vegas is Sunday in Europe and Asia.","SWIPE >>>","1_2")
 slide(3,"A PODIUM FROM P10 OR LOWER IN EVERY VEGAS RACE",s_comeback,"Lowest grid slot to reach the podium.","Perez 2023, Hamilton 2024, Antonelli 2025.","FOLLOW","1_3")
 slide(1,"VERSTAPPEN WON 2 OF 3 VEGAS RACES, BOTH FROM P2",s_history,"Winners and pole sitters since 2023.","Only Russell has turned Vegas pole into a win.","SWIPE >>>","2_1")
 slide(2,"FP1 THURSDAY 16:30 LOCAL, RACE SATURDAY 20:00",s_weekend,"Every session, local time vs UTC.","Las Vegas runs 8 hours behind UTC.","SWIPE >>>","2_2")
 slide(3,"6.201 KM, 50 LAPS, CONTRACT UNTIL 2037",s_stats,"Six numbers for the weekend.","Las Vegas is on the calendar for 12 more seasons.","FOLLOW","2_3")
 slide(1,"PEREZ P11, HAMILTON P10, ANTONELLI P17 TO THE PODIUM",s_comeback,"Lowest grid slot to reach the podium.","Every Vegas race so far had a comeback podium.","SWIPE >>>","3_1")
-slide(2,"VEGAS: DOWN THE STRIP, AROUND THE SPHERE, 50 TIMES",s_track,"Las Vegas Strip Circuit, schematic.","6.201 km, raced anticlockwise.","SWIPE >>>","3_2")
+slide(2,"VEGAS: DOWN THE STRIP, AROUND THE SPHERE, 50 TIMES",s_track,"Las Vegas Strip Circuit, north up.","6.201 km, raced anticlockwise.","SWIPE >>>","3_2")
 slide(3,"QUALI FRI 20:00 LOCAL, RACE SAT 20:00 LOCAL",s_weekend,"Every session, local time vs UTC.","Race: Sunday 04:00 UTC.","FOLLOW","3_3")
 names=[f"{v}_{i}" for v in "123" for i in "123"]
 sh=Image.new("RGB",(3*550+10,3*685+10),(60,60,60))
