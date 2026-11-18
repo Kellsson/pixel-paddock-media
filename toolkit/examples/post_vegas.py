@@ -103,6 +103,10 @@ slide(3,"6.201 KM, 50 LAPS, CONTRACT UNTIL 2037",s_stats,"Six numbers for the we
 slide(1,"PEREZ P11, HAMILTON P10, ANTONELLI P17 TO THE PODIUM",s_comeback,"Lowest grid slot to reach the podium.","Every Vegas race so far had a comeback podium.","SWIPE >>>","3_1")
 slide(2,"VEGAS: DOWN THE STRIP, AROUND THE SPHERE, 50 TIMES",s_track,"Las Vegas Strip Circuit, north up.","6.201 km, raced anticlockwise.","SWIPE >>>","3_2")
 slide(3,"QUALI FRI 20:00 LOCAL, RACE SAT 20:00 LOCAL",s_weekend,"Every session, local time vs UTC.","Race: Sunday 04:00 UTC.","FOLLOW","3_3")
+# FINAL (Marius 18.11.): track + comeback + winners
+slide(1,"LAS VEGAS: 50 NIGHT LAPS OF THE 6.201 KM STRIP CIRCUIT",s_track,"Las Vegas Strip Circuit, north up.","Lights out Sat 20:00 local, Sun 04:00 UTC.","SWIPE >>>","F_1")
+slide(2,"A PODIUM FROM P10 OR LOWER IN EVERY VEGAS RACE",s_comeback,"Lowest grid slot to reach the podium.","Perez 2023, Hamilton 2024, Antonelli 2025.","SWIPE >>>","F_2")
+slide(3,"VERSTAPPEN WON 2 OF 3 VEGAS RACES, BOTH FROM P2",s_history,"Winners and pole sitters since 2023.","Only Russell has turned Vegas pole into a win.","FOLLOW","F_3")
 names=[f"{v}_{i}" for v in "123" for i in "123"]
 sh=Image.new("RGB",(3*550+10,3*685+10),(60,60,60))
 for k,n in enumerate(names): sh.paste(Image.open(f"{OUT}/{n}.png").resize((540,675)),(10+(k%3)*550,10+(k//3)*685))
