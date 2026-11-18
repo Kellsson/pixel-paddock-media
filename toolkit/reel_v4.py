@@ -10,7 +10,7 @@ from reel_v3 import BG, slam, LOGO
 from mock_v2 import track as load_track
 HERE = os.path.dirname(os.path.abspath(__file__))
 SR = 44100
-TRACKS = {"AUSTIN": f"{HERE}/geo/us.geojson", "MEXICO CITY": f"{HERE}/geo/mx.geojson", "SAO PAULO": f"{HERE}/geo/br.geojson"}
+TRACKS = {"AUSTIN": f"{HERE}/geo/us.geojson", "MEXICO CITY": f"{HERE}/geo/mx.geojson", "SAO PAULO": f"{HERE}/geo/br.geojson", "LAS VEGAS": f"{HERE}/geo/lv.geojson"}
 
 def track_pts(gp):
     P = load_track(TRACKS[gp]); xs = [q[0] for q in P]; ys = [q[1] for q in P]
