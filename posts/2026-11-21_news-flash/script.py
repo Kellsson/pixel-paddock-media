@@ -2,7 +2,7 @@ import os, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__))); sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 from PIL import Image, ImageDraw
 exec(open(os.path.join(os.path.dirname(os.path.abspath(__file__)),"post_fri.py")).read().split("def slide(")[0].replace('"out_fri"','"out_flash"').replace('DATE = "07.11.26"','DATE = "21.11.26"').replace('HUD = "23.70S 46.70W"','HUD = "NEWS FLASH 01"'))
-from pp import text, tlen
+from pp import text, tlen, framed
 # NEWS FLASH No. 1, v3 (Marius 21.11.): big "01 OF 03" counter at the very top of the page, then ONE headline,
 # details as cards (v1 style) in story colour, one story per slide, "next" teaser to drive the swipe.
 # Sources (2 each, year 2026 checked):
@@ -29,14 +29,14 @@ def paste_px(im, x, y, s, col, k):
     b = px(s, col, k); m = Image.eval(b.convert("L"), lambda v: 255 if v > 30 else 0); im.paste(b, (x, y), m)
 
 def counter(im, d, i, st, first):
-    y = 125
-    paste_px(im, 40, y, f"0{i+1}", st["col"], 12)                     # 01
-    paste_px(im, 150, y+36, "OF 03", hx("#94a3b8"), 6)                 # OF 03
-    for j in range(3):                                                 # progress
-        R(d, 290+j*60, y+50, 340+j*60, y+66, st["col"] if j == i else C["rule"])
-    lab = "NEWS FLASH"; text(im, W-40-tlen("labelb", lab), y+30, lab, "labelb", C["red"])
-    sub = "3 STORIES, SWIPE >>>" if first else st["tag"]
-    text(im, W-40-tlen("label", sub), y+66, sub, "label", C["ink"] if first else C["mute"])
+    y = 135
+    paste_px(im, 40, y, f"0{i+1}", st["col"], 12)                       # 01 in story colour
+    d.line([(158, y+80), (182, y+4)], fill=C["rule"], width=10)         # slash
+    paste_px(im, 196, y, "03", hx("#3b4656"), 12)                       # 03 big, subdued
+    for j in range(3):                                                  # colour-coded progress
+        R(d, 340+j*60, y+56, 390+j*60, y+70, st["col"] if j == i else C["rule"])
+    lab = "NEWS FLASH"; text(im, W-40-tlen("labelb", lab), y+36, lab, "labelb", C["red"])
+    text(im, W-40-tlen("label", st["tag"]), y+70, st["tag"], "label", C["mute"])
 
 def card(d, im, y, c, stat, h1, h2, ctx):
     r(d, 6, y, 194, y+38, BOXC); r(d, 6, y, 8, y+38, c)
@@ -54,13 +54,11 @@ def scene_for(order, i):
         return im
     return s
 
-def slide(k, head, order, figt, bod, foot, name):
+def slide(k, head, order, foot, name):
     im, d = page(k, 3, DATE)
     counter(im, d, k-1, STORIES[order[k-1]], k == 1)
-    y = headline(im, head, top=260)
-    y = cover_image(im, d, scene_for(order, k-1)(), y + 40, HUD)
-    fig(im, y + 60, figt, k)
-    body(im, y + 95, bod)
+    y = headline(im, head, top=330)
+    framed(im, scene_for(order, k-1)(), 40, y + 100)
     footer(im, d, k, foot); im.save(f"{OUT}/{name}.png")
 
 HEAD = {"v8": "V8 ENGINES RETURN TO F1 IN 2030", "pia": "PIASTRI GETS A 10-PLACE GRID DROP", "bot": "BOTTAS STAYS, NO 2027 SEAT FOR HERTA"}
@@ -71,7 +69,7 @@ FIG = ["Story 1 of 3. Swipe for the next one.", "Story 2 of 3. One more to go.",
 V = {"1": (["v8", "pia", "bot"], HEAD), "2": (["pia", "v8", "bot"], HEAD), "3": (["v8", "bot", "pia"], HEAD3)}
 for v, (order, heads) in V.items():
     for i in range(3):
-        slide(i+1, heads[order[i]], order, FIG[i], BOD[order[i]], "SWIPE >>>" if i < 2 else "FOLLOW", f"{v}_{i+1}")
+        slide(i+1, heads[order[i]], order, "", f"{v}_{i+1}")
 names = [f"{v}_{i}" for v in "123" for i in "123"]
 sh = Image.new("RGB", (3*550+10, 3*685+10), (60, 60, 60))
 for k, n in enumerate(names): sh.paste(Image.open(f"{OUT}/{n}.png").resize((540, 675)), (10+(k%3)*550, 10+(k//3)*685))
