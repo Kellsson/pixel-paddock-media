@@ -49,7 +49,7 @@ if __name__ == "__main__":
             prev = {c: i + 1 for i, (c, *_rest) in enumerate(classification(session_key(year, loc, PREV[name])))}
             moves = {c: prev[c] - (i + 1) for i, (c, *_r) in enumerate(cl[:10]) if c in prev}
             mlabel = "VS GRID" if name == "Race" else f"VS {dict(zip(PREV.values(), ['FP1','FP2','FP3','QUALI'])).get(PREV[name], 'PREV')}"
-        except SystemExit: pass
+        except (SystemExit, Exception) as e: print('no prev session moves:', e)   # e.g. FP1 washout, no session_result
     p1, p2, p10 = cl[0], cl[1], cl[min(9, len(cl) - 1)]
     if name == "Race":
         ins = [f"{p1[0]} WINS {label if label != 'RACE' else ''}".strip(), f"MARGIN TO P2: {p2[2].lstrip('+')}S" if p2[2][0] == "+" and "LAP" not in p2[2] else f"P2: {p2[0]}"]
