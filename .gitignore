@@ -1,2 +1,4 @@
-out_*/
 __pycache__/
+out_*/
+shorts/data/
+shorts/engine/out_short/

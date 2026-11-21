@@ -42,3 +42,12 @@ Render: `cd shorts/engine && python3 races.py 91|05|both` writes to `engine/out_
 - Time skips only via LAP cards, never by cars racing through many laps.
 - Nothing important in the bottom ~30% or the right edge (YouTube overlay).
 - Attractive, but no clickbait.
+
+## Race replays (real data)
+Recent races replayed from OpenF1 position data: all cars on the real racing line, fast-forward with a top-5 tower, slow-down and zoom for highlights, then the podium.
+| Race | Video |
+|---|---|
+| Mexico City 2026 (Verstappen, Antonelli champion, 75 s) | [replays/2026_mexico/replay.mp4](replays/2026_mexico/replay.mp4) |
+
+Engine: `engine/replay.py`, race config `engine/replay_mexico26.py`, sources [SOURCES_REPLAY.md](SOURCES_REPLAY.md).
+New race: `replay_fetch.py` -> `replay_prep.py` -> copy a config, find highlight times in the data, render. The raw data is not in the repo (OpenF1 CC BY-NC-SA, non-commercial).
