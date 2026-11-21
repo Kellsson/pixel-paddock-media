@@ -57,7 +57,7 @@ if __name__ == "__main__":
             if sum(1 for x in undated if x[0] == n) < 6: undated.append((n, t, l))
             continue
         if d < cut: continue
-        if filt and n not in F1_ONLY and not KW.search(t): continue
+        if filt and n not in F1_ONLY and (not KW.search(t) or re.search(r'motogp|indycar|formula-e|wec|nascar', l, re.I)): continue
         k = re.sub(r"\W+", "", t.lower())[:60]
         if k in seen: continue
         seen.add(k); rows.append((d, n, t, l))
