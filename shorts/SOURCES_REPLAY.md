@@ -12,7 +12,7 @@ Raw data is not committed. Fetch it with `engine/replay_fetch.py`, then run `eng
 | Leclerc 5 s penalty | Race control, lap 12: "5 SECOND TIME PENALTY FOR CAR 16 (LEC) - LEAVING THE TRACK AND GAINING AN ADVANTAGE" |
 | Antonelli leads, yet to stop (lap ~31) | OpenF1 order; Silverstone ("Hamilton pitted on Lap 28 ... left Antonelli in the lead") |
 | Verstappen leads after the stops | OpenF1 order after Antonelli's stop (pit data: lap 43) |
-| Bottas: suspension failure, crash at T1 (lap 44) | Silverstone, GDN Online ("crashed at Turn One on Lap 44 following an apparent high-speed suspension failure"); position data: from ~339 km/h to standstill at T1 |
+| Bottas: suspension failure, into the barrier at T1 (lap 44). The off-track path and barrier are drawn as an illustration, because position data only shows him stopping just after T1 | Silverstone, GDN Online ("crashed at Turn One on Lap 44 following an apparent high-speed suspension failure"); position data: from ~339 km/h to standstill at T1 |
 | Red flag for barrier repairs | Race control (lap 45 RED FLAG); PlanetF1 ("barrier repairs required") |
 | Standing restart | Race control "STANDING START"; PlanetF1 |
 | Hamilton to P2 at the restart | Silverstone ("passed Leclerc on the run to Turn 1"); position data t=6496.5 s |
