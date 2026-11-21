@@ -33,8 +33,6 @@ def counter(im, d, i, st, first):
     paste_px(im, 40, y, f"0{i+1}", st["col"], 12)                       # 01 in story colour
     d.line([(158, y+80), (182, y+4)], fill=C["rule"], width=10)         # slash
     paste_px(im, 196, y, "03", hx("#3b4656"), 12)                       # 03 big, subdued
-    for j in range(3):                                                  # colour-coded progress
-        R(d, 340+j*60, y+56, 390+j*60, y+70, st["col"] if j == i else C["rule"])
     lab = "NEWS FLASH"; text(im, W-40-tlen("labelb", lab), y+36, lab, "labelb", C["red"])
     text(im, W-40-tlen("label", st["tag"]), y+70, st["tag"], "label", C["mute"])
 
@@ -47,10 +45,8 @@ def card(d, im, y, c, stat, h1, h2, ctx):
 def scene_for(order, i):
     st = STORIES[order[i]]
     def s():
-        im = Image.new("RGB", (200, 120), BG); d = ImageDraw.Draw(im)
+        im = Image.new("RGB", (200, 94), BG); d = ImageDraw.Draw(im)
         for k, cd in enumerate(st["cards"]): card(d, im, 6+k*44, st["col"], *cd)
-        if i < 2: tx(d, 6, 101, f"NEXT: {STORIES[order[i+1]]['teaser']}  >>>", GREEN)
-        else:     tx(d, 6, 101, "THAT'S ALL 3. FOLLOW FOR MORE", GREEN)
         return im
     return s
 
@@ -58,7 +54,10 @@ def slide(k, head, order, foot, name):
     im, d = page(k, 3, DATE)
     counter(im, d, k-1, STORIES[order[k-1]], k == 1)
     y = headline(im, head, top=330)
-    framed(im, scene_for(order, k-1)(), 40, y + 100)
+    yb = framed(im, scene_for(order, k-1)(), 40, y + 100)
+    i = k-1
+    nxt = f"NEXT: {STORIES[order[i+1]]['teaser']}  >>>" if i < 2 else "THAT'S ALL 3. FOLLOW FOR MORE"
+    text(im, 40, yb + 80, nxt, "labelb", C["red"])
     footer(im, d, k, foot); im.save(f"{OUT}/{name}.png")
 
 HEAD = {"v8": "V8 ENGINES RETURN TO F1 IN 2030", "pia": "PIASTRI GETS A 10-PLACE GRID DROP", "bot": "BOTTAS STAYS, NO 2027 SEAT FOR HERTA"}
