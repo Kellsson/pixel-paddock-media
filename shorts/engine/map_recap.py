@@ -24,7 +24,11 @@ for k, v in {":": "000010000010000", "'": "010010000000000", ",": "0000000000101
 INK, MUT, YEL, GRN, RED = (243, 244, 246), (148, 163, 184), (242, 201, 76), (57, 255, 20), (239, 68, 68)
 BG = (10, 12, 20); EDGE = (52, 60, 86); PANEL = (6, 8, 16)
 
+HIRES = None   # list -> record text ops for full-resolution brand-font rendering (see replay.py)
 def tx(d, x, y, s, c, sc=1):
+    if HIRES is not None:
+        if s.strip(): HIRES.append((x, y, s.upper(), tuple(c), sc))
+        return
     for ch in s.upper():
         g = FONT3.get(ch)
         if g:
@@ -122,6 +126,7 @@ def zoom_for(R, px):
     """zoom at which a car is px logical pixels long"""
     tr = Track(R["geo"], rot=R.get("rot", 0)); return px / (R["car_m"] * tr.fit)
 
+THEME = dict(edge=(60, 68, 92), asphalt=(38, 42, 54), sc=(70, 62, 20), centre=(48, 54, 70))
 _GX, _GY = np.meshgrid(np.arange(NW) + .5, np.arange(NH) + .5)
 _MAP_CACHE = {}
 def track_dist(tr, cam, w):
@@ -148,9 +153,9 @@ def draw_map(im, tr, cam, start_frac=0.0, sc_on=False, dim=1.0):
     z = cam[2]; w = track_w(z)
     c = lambda col: tuple(int(v * dim + BG[i] * (1 - dim)) for i, v in enumerate(col))
     D = track_dist(tr, cam, w); a = np.asarray(im).copy()
-    a[D <= w / 2 + 1] = c((60, 68, 92))
-    a[D <= w / 2] = c((38, 42, 54) if not sc_on else (70, 62, 20))
-    if w >= 6: a[D <= .55] = c((48, 54, 70))
+    a[D <= w / 2 + 1] = c(THEME["edge"])
+    a[D <= w / 2] = c(THEME["asphalt"] if not sc_on else THEME["sc"])
+    if w >= 6: a[D <= .55] = c(THEME["centre"])
     im.paste(Image.fromarray(a)); d = ImageDraw.Draw(im)
     x, y = project(tr, cam, tr.at(start_frac)); h = tr.heading(start_frac) + math.pi / 2
     for k in range(-w // 2 - 1, w // 2 + 2):
@@ -159,16 +164,18 @@ def draw_map(im, tr, cam, start_frac=0.0, sc_on=False, dim=1.0):
 
 def shade(im, box, k=.2):
     x0, y0, x1, y1 = box
+    if HIRES is not None:   # text already queued under a new panel is hidden by it
+        HIRES[:] = [o for o in HIRES if not (x0 <= o[0] + tw(o[2], o[4]) / 2 <= x1 and y0 <= o[1] + 2.5 * o[4] <= y1)]
     a = np.asarray(im).astype(float)
     a[y0:y1, x0:x1] = a[y0:y1, x0:x1] * k + np.array(PANEL) * (1 - k)
     return Image.fromarray(a.astype(np.uint8))
 
 def panel(im, lines, y0=24):
     if not lines: return im
-    h = sum(5 * s + 5 for _, _, s in lines) + 7
+    h = sum(5 * s for _, _, s in lines) + 5 * (len(lines) - 1) + 12
     im = shade(im, (SAFE_X0, y0, SAFE_X1, y0 + h)); d = ImageDraw.Draw(im)
     d.rectangle([SAFE_X0, y0, SAFE_X1 - 1, y0 + h - 1], outline=EDGE)
-    y = y0 + 5
+    y = y0 + 6
     for s, c, sc in lines:
         tx(d, CX - tw(s, sc) // 2, y, s, c, sc); y += 5 * sc + 5
     return im
@@ -276,7 +283,7 @@ def grid_card(im, tr, rows, fr, fire=None, delay=True):
     return im
 
 def box_size(lines):
-    return max(tw(t, sc) for t, _, sc in lines) + 10, sum(5 * sc + 4 for _, _, sc in lines) + 6
+    return max(tw(t, sc) for t, _, sc in lines) + 12, sum(5 * sc for _, _, sc in lines) + 4 * (len(lines) - 1) + 12
 
 def clamp_box(bx0, by0, w, h):
     xmax = (YT_X if by0 + h > 120 else SAFE_X1) - w
@@ -317,7 +324,7 @@ def callout(im, anchor, lines, age, rel):
     if by0 > ay: d.line([(px_, by0 - 1), (ax, ay + 4)], fill=YEL)
     else: d.line([(px_, by0 + h), (ax, ay - 4)], fill=YEL)
     if age >= 5:
-        budget = (age - 5) * 3; y = by0 + 4
+        budget = (age - 5) * 3; y = by0 + 6
         for t, c, sc in lines:
             show = t[:max(0, budget)]; budget -= len(t)
             tx(d, bx0 + (w - tw(t, sc)) // 2, y, show, c, sc); y += 5 * sc + 4

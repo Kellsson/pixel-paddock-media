@@ -47,7 +47,9 @@ Render: `cd shorts/engine && python3 races.py 91|05|both` writes to `engine/out_
 Recent races replayed from OpenF1 position data: all cars on the real racing line, fast-forward with a top-5 tower, slow-down and zoom for highlights, then the podium.
 | Race | Video |
 |---|---|
-| Mexico City 2026 (Verstappen, Antonelli champion, 82 s) | [replays/2026_mexico/replay.mp4](replays/2026_mexico/replay.mp4) |
+| Mexico City 2026 (Verstappen, Antonelli champion, 88 s) | [replays/2026_mexico/replay.mp4](replays/2026_mexico/replay.mp4) |
+
+Brand look (replays): the Pixel Paddock palette (paper, speckles, ink, neon green, signal red) and the brand fonts drawn at full resolution (Press Start 2P for big text, Silkscreen for small labels; `apply_brand()` + `finish_frame()`). The title and outro cards follow the brand guide. Fact boxes stay at least 2.4 s on screen.
 
 Engine: `engine/replay.py`, race config `engine/replay_mexico26.py`, sources [SOURCES_REPLAY.md](SOURCES_REPLAY.md).
 New race: `replay_fetch.py` -> `replay_prep.py` -> copy a config, find highlight times in the data, render. The raw data is not in the repo (OpenF1 CC BY-NC-SA, non-commercial).

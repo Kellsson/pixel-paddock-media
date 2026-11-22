@@ -3,12 +3,14 @@ Race times t = seconds after 2026-11-01 20:00:00 UTC. Every highlight time below
 import os, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from replay import *
+apply_brand()
+from replay import *   # re-import so INK/YEL/... are the brand colours
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 R = Race(f"{HERE}/../data/2026_mexico", f"{HERE}/../data/2026_mexico.npz")
 R.track_m, R.car_m = 30, 16          # closest separate track sections: 65 m
 R.sc = [(3846, 3962), (7502, 7918)]
-R.crash = dict(car="BOT", t_off=3828.6, t_stop=3833.8)   # data: ~339 km/h at 3826, standstill at 3834 just after T1  # race control: SC deployed lap 44 -> red flag; SC lap 59 -> in at end of lap 62
+R.crash = dict(car="BOT", t_off=3828.6, t_stop=3833.8, t_end=3962)   # wreck and barrier visible until the red flag   # data: ~339 km/h at 3826, standstill at 3834 just after T1  # race control: SC deployed lap 44 -> red flag; SC lap 59 -> in at end of lap 62
 grid = R.order(100)
 R.grid_rows = [(i + 1, ("*" if c == "HAM" else "") + c, R.dr[c]["_team"]) for i, c in enumerate(grid)]
 res = R.result
@@ -16,11 +18,11 @@ R.podium_rows = [(str(r["position"]), R.dr[R.acr[r["driver_number"]]]["last_name
                   "WINNER" if r["position"] == 1 else f"+{r['gap_to_leader']:.3f}", grid.index(R.acr[r["driver_number"]]) + 1) for r in res[:6]]
 
 S = [
-    dict(frames=105, brand=[("F1 RACE REPLAY", "acc", 6), ("MEXICO CITY", "ink", 5), ("1 NOV 2026", "mute", 4)], chip="TITLE DECIDER"),
+    dict(frames=105, brand=[("F1 RACE", "acc", 11), ("REPLAY", "acc", 11), ("MEXICO CITY 2026", "ink", 5)], chip="TITLE DECIDER"),
     dict(frames=85, grid=True, header=[("HAMILTON", INK, 2), ("ON POLE", YEL, 2)], mark=(1,)),
     # start: Ferraris fight, run wide at T4, Verstappen up to P2, Leclerc leads
-    dict(t0=204, t1=257, dur=7.0, live=True, cam=("pack", ["HAM", "LEC", "VER"], 11), labels=("HAM", "LEC", "VER"),
-         call=[(212, "HAM", [("LIGHTS OUT", GRN, 2)], "up"), (236, "LEC", [("BOTH FERRARIS", INK, 2), ("RUN WIDE", YEL, 2)], "up"),
+    dict(t0=204, t1=257, dur=9.0, live=True, cam=("pack", ["HAM", "LEC", "VER"], 11), labels=("HAM", "LEC", "VER"),
+         call=[(212, "HAM", [("LIGHTS OUT", GRN, 2)], "up"), (235, "LEC", [("BOTH FERRARIS", INK, 2), ("RUN WIDE", YEL, 2)], "up"),
                (247, "VER", [("VER UP TO P2", GRN, 2)], "up")]),
     dict(t0=257, t1=1222, dur=2.8, cam=("over",)),
     dict(t0=1222, t1=1240, dur=2.0, live=True, cam=("over",), call=[(1223, "LEC", [("LECLERC", INK, 2), ("5 S PENALTY", RED, 2)], "up")]),
@@ -49,7 +51,7 @@ S = [
          call=[(8620, "HAM", [("HAMILTON", INK, 2), ("ON THE ATTACK", YEL, 2)], "down"), (8634, "VER", [("VERSTAPPEN", GRN, 2), ("WINS", GRN, 2)], "up")]),
     dict(frames=110, note=[("ANTONELLI P3", INK, 2), ("WORLD CHAMPION", YEL, 2), ("YOUNGEST EVER", GRN, 2), ("AGE 20Y 68D", MUT, 2)]),
     dict(frames=170, board=True, extra=["WON BY 0.799 S"]),
-    dict(frames=150, brand=[("F1 RACE REPLAY", "acc", 5), ("MEXICO CITY", "ink", 4)], follow=True),
+    dict(frames=150, brand=[("F1 RACE", "acc", 9), ("REPLAY", "acc", 9), ("MEXICO CITY 2026", "ink", 4)], follow=True),
 ]
 
 if __name__ == "__main__":

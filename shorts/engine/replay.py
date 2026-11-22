@@ -16,6 +16,54 @@ from map_recap import (tx, tw, ease, lerp, draw_car, TEAMS, team_col, shade, pan
                        grid_card, grid_slot, hud, SIZE, car_px, track_w, WARN)
 from PIL import Image, ImageDraw
 
+BRAND = dict(paper=(20, 18, 15), speck=(27, 24, 20), box=(31, 27, 22), ink=(236, 227, 207), mute=(184, 173, 150),
+             rule=(58, 53, 44), acc=(57, 255, 20), red=(232, 35, 63), yellow=(250, 204, 21))
+def apply_brand():
+    """Switch the shared drawing code to the Pixel Paddock palette (paper, ink, neon green, signal red)."""
+    g = globals()
+    for k, v in dict(BG=BRAND["paper"], INK=BRAND["ink"], MUT=BRAND["mute"], YEL=BRAND["acc"], GRN=BRAND["acc"], RED=BRAND["red"],
+                     EDGE=BRAND["rule"], PANEL=BRAND["box"]).items():
+        setattr(M, k, v); g[k] = v
+    M.THEME.update(edge=(66, 60, 50), asphalt=(40, 36, 30), sc=(78, 66, 18), centre=(52, 47, 39))
+
+# ---- full-resolution text in the brand fonts (Press Start 2P for big text, Silkscreen for small labels)
+_FD = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "toolkit", "fonts")
+_BF = {"ps2p": f"{_FD}/fontsource-press-start-2p-5.3.0/files/press-start-2p-latin-400-normal.woff",
+       "silk": f"{_FD}/fontsource-silkscreen-5.3.0/files/silkscreen-latin-700-normal.woff"}
+_MC = {}
+def text_mask(t, font, p):
+    key = (t, font, p)
+    if key not in _MC:
+        from PIL import ImageFont
+        f = ImageFont.truetype(_BF[font], 8); y0, y1 = (0, 7) if font == "ps2p" else (4, 9)
+        w = int(ImageDraw.Draw(Image.new("L", (1, 1))).textlength(t, font=f)) + 2
+        m = Image.new("L", (w, 12), 0); dd = ImageDraw.Draw(m); dd.fontmode = "1"; dd.text((0, 0), t, font=f, fill=255)
+        m = m.crop((0, y0, w, y1)).point(lambda v: 255 if v > 127 else 0)
+        bb = m.getbbox() or (0, 0, 1, 1); m = m.crop((0, 0, bb[2], m.size[1]))
+        if len(_MC) > 3000: _MC.clear()
+        _MC[key] = m.resize((m.size[0] * p, m.size[1] * p), Image.NEAREST)
+    return _MC[key]
+def render_text_ops(big, ops):
+    for x, y, t, c, sc in ops:
+        font, p = ("ps2p", 4 * sc) if sc >= 2 else ("silk", 5)
+        m = text_mask(t, font, p)
+        bw, bh = tw(t, sc) * SC, 5 * sc * SC
+        big.paste(Image.new("RGB", m.size, c), (int(x * SC + (bw - m.size[0]) / 2), int(y * SC + (bh - m.size[1]) / 2)), m)
+_SPECK = None
+def finish_frame(im):
+    """upscale, add the brand's paper speckles on empty background, then the full-resolution text"""
+    global _SPECK
+    ops = M.HIRES or []; M.HIRES = []
+    a = np.asarray(im.resize((NW * SC, NH * SC), Image.NEAREST)).copy()
+    if _SPECK is None:
+        rr = np.random.default_rng(3); _SPECK = np.zeros(a.shape[:2], bool)
+        for _ in range(1400):
+            x, y = int(rr.integers(0, NW * SC // 5)) * 5, int(rr.integers(0, NH * SC // 5)) * 5; _SPECK[y:y + 5, x:x + 5] = True
+    bgm = (a == np.array(BRAND["paper"], np.uint8)).all(-1) & _SPECK
+    a[bgm] = BRAND["speck"]
+    big = Image.fromarray(a); render_text_ops(big, ops)
+    return big
+
 def hexcol(h): return tuple(int(h[i:i + 2], 16) for i in (0, 2, 4))
 def livery(h):
     c = hexcol(h); dk = tuple(int(v * .55) for v in c); lt = tuple(min(255, int(v * .6 + 255 * .4)) for v in c)
@@ -182,16 +230,15 @@ def brand_card(fr, R, lines, chip=None, track=True, follow=False):
     rr = np.random.default_rng(3)
     for _ in range(900):
         x, y = int(rr.integers(0, W // 5)) * 5, int(rr.integers(0, H // 5)) * 5; d.rectangle([x, y, x + 4, y + 4], fill=PP["speck"])
-    logo = Image.open(_LOGO).convert("RGB").resize((220, 220), Image.NEAREST)
-    if fr >= 2: im.paste(logo, (W // 2 - 110, 170))
-    if fr >= 6: btext(im, "THE PIXEL PADDOCK", "label", 5, PP["ink"], 450)
-    k = ease(min(1, max(0, fr - 8) / 10)); d.rectangle([W // 2 - int(380 * k), 505, W // 2 + int(380 * k), 509], fill=PP["rule"])
-    y = 610
+    logo = Image.open(_LOGO).convert("RGB").resize((140, 140), Image.NEAREST)
+    if fr >= 2: im.paste(logo, (W // 2 - 70, 150))
+    if fr >= 4: btext(im, "THE PIXEL PADDOCK", "label", 3, PP["mute"], 330)
+    y = 560
     for i, (t, col, sc) in enumerate(lines):
-        if fr >= 12 + i * 8:
-            shown = t[:max(1, (fr - 12 - i * 8) * 2)]
+        if fr >= 10 + i * 6:
+            shown = t[:max(1, (fr - 10 - i * 6) * 2)]
             btext(im, shown, "head", sc, PP[col], y)
-        y += sc * 8 + 46
+        y += sc * 8 + (30 if sc >= 8 else 60)
     if chip and fr >= 12 + len(lines) * 8:
         w = btext(Image.new("RGB", (1, 1)), chip, "label", 5, PP["ink"], 0) if False else None
         tw_ = len(chip) * 34 + 60; d.rectangle([W // 2 - tw_ // 2, y - 6, W // 2 + tw_ // 2, y + 76], outline=PP["acc"], width=5)
@@ -218,8 +265,23 @@ def hermite(u, t0, t1, dur, v0, v1):
     h00 = 2 * u ** 3 - 3 * u ** 2 + 1; h10 = u ** 3 - 2 * u ** 2 + u; h01 = -2 * u ** 3 + 3 * u ** 2; h11 = u ** 3 - u ** 2
     return h00 * t0 + h10 * dur * v0 + h01 * t1 + h11 * dur * v1
 
+MIN_CALL = 2.4
+def stretch(segs):
+    """make sure the last fact box of a live scene stays readable: extend the scene (same speed) if needed"""
+    for i, sg in enumerate(segs):
+        if "t0" not in sg or not sg.get("live") or not sg.get("call"): continue
+        v = (sg["t1"] - sg["t0"]) / sg["dur"]; tc = max(c[0] for c in sg["call"])
+        if (sg["t1"] - tc) / v < MIN_CALL:
+            t1 = tc + v * MIN_CALL
+            if i + 1 < len(segs) and segs[i + 1].get("t0") == sg["t1"]: segs[i + 1]["t0"] = t1
+            sg["t1"] = t1; sg["dur"] = (t1 - sg["t0"]) / v
+        cs = sorted(c[0] for c in sg["call"])
+        for a, b in zip(cs, cs[1:]):
+            if (b - a) / v < 2.0: print(f"  NOTE: facts {a} and {b} only {(b - a) / v:.1f} s apart")
+
 def plan(segs):
     """frames and race time per frame for race segments"""
+    stretch(segs)
     for i, sg in enumerate(segs):
         if "t0" not in sg: continue
         F = max(2, int(round(sg["dur"] * FPS))); sg["frames"] = F
@@ -252,6 +314,7 @@ def render(R, segs, name, audio_tag):
                           "-i", wav, "-c:v", "libx264", "-pix_fmt", "yuv420p", "-crf", "18", "-c:a", "aac", "-b:a", "160k", "-shortest",
                           f"{OUT}/{name}.mp4"], stdin=subprocess.PIPE)
     over = (tr.cx, tr.cy - 8 / tr.fit, 1.0)
+    apply_brand(); M.HIRES = []
     cam = over; snaps = []; WARN.clear()
     for si, sg in enumerate(segs):
         F = sg["frames"]
@@ -279,7 +342,7 @@ def render(R, segs, name, audio_tag):
                     im = panel(im, [(t, c, s_) if fr >= 6 + i * 14 else ("", c, s_) for i, (t, c, s_) in enumerate(sg["text"])], y0=70)
                     if fr > 40: d = ImageDraw.Draw(im); tx(d, CX - tw("THE PIXEL PADDOCK") // 2, 130, "THE PIXEL PADDOCK", GRN)
                 if fr == F - 4: snaps.append(im)
-                p.stdin.write(im.resize((NW * SC, NH * SC), Image.NEAREST).tobytes())
+                p.stdin.write(finish_frame(im).tobytes())
             cam = over
             continue
         cam_start = cam
@@ -299,7 +362,7 @@ def render(R, segs, name, audio_tag):
             im = Image.new("RGB", (NW, NH), BG)
             d = draw_map(im, tr, cam, sc_on=sc_on)
             z = cam[2]; px = car_px(z); anchors = {}; avoid = []; placed = []
-            if getattr(R, "crash", None) and t > R.crash["t_off"] - 5: crash_fx(d, R, tr, cam, t, px)
+            if getattr(R, "crash", None) and R.crash["t_off"] - 5 < t < R.crash.get("t_end", 1e9): crash_fx(d, R, tr, cam, t, px)
             order = R.order(t)
             for c in sorted(R.cars, key=lambda c: -order.index(c) if c in order else -99):
                 if not R.visible(c, t): continue
@@ -326,7 +389,7 @@ def render(R, segs, name, audio_tag):
             sgc = {"call": sg["call_f"], "_place": sg.setdefault("_place", {})}
             im = apply_calls(im, sgc, fr, anchors, avoid, (name, si))
             if fr == F - 4: snaps.append(im)
-            p.stdin.write(im.resize((NW * SC, NH * SC), Image.NEAREST).tobytes())
+            p.stdin.write(finish_frame(im).tobytes())
     p.stdin.close(); p.wait()
     sh = Image.new("RGB", (180 * len(snaps), 320))
     for i, s_ in enumerate(snaps): sh.paste(s_.resize((180, 320), Image.NEAREST), (i * 180, 0))
