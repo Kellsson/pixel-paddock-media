@@ -41,6 +41,7 @@ calls = [
     (A["lap"] + 1.0, "ANT", [("ANTONELLI", INK, 2), (f"FASTER BY {B['lap'] - A['lap']:.3f}", GRN, 2)], "down"),
     (A["lap"] + 3.2, "ANT", [("S3 DECIDED IT", INK, 2), (f"ANT -{B['secs'][2] - A['secs'][2]:.3f} S", GRN, 2)], "down"),
 ]
+calls = [c_ if c_[0] >= A["lap"] or len(c_) > 4 else c_ + (A["lap"],) for c_ in calls]   # nothing old pops back at the line
 before = [dict(frames=110, brand=[("F1 QUALI", "acc", 11), ("DUEL", "acc", 11), ("LAS VEGAS 2026", "ink", 5)], logo=False, cars=900)]
 after = [
     dict(frames=150, table=True, mood="podium"),
