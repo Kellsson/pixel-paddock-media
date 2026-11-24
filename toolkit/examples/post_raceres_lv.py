@@ -76,6 +76,22 @@ def s_p2():
     tx(d,6,94,"VERSTAPPEN 37 CLEAR IN P2",INK); tx(d,6,102,"2 RACES LEFT: QATAR, ABU DHABI",MUT)
     calm(d); return im
 
+# Grid > finish slope (same scene as Brazil post_race.py); grid/finish: FIA Doc 65 + Jolpica
+ROWS=[("VER",0),("NOR",0),("PIA",0),("ANT",0),("GAS",0),("COL",0),("HAM",0),("SAI",0),("RUS",0),("LEC",0)]
+GRIDP={"VER":1,"RUS":2,"NOR":3,"ANT":6,"GAS":8,"COL":9,"LEC":10,"HAM":11,"PIA":17,"SAI":20}
+def s_slope():
+    im = Image.new("RGB",(200,120),BG); d=ImageDraw.Draw(im)
+    tx(d,6,4,"GRID > FINISH, TOP 10 FINISHERS",INK)
+    tx(d,22,12,"GRID",MUT); tx(d,150,12,"FINISH",MUT)
+    def Y(p): return 21+(p-1)*7.6
+    order=sorted(ROWS,key=lambda t:GRIDP[t[0]])
+    for j,(c,_) in enumerate(order):
+        lab=f"P{GRIDP[c]} {c}"; tx(d,44-len(lab)*4,int(Y(j+1))-2,lab,INK)
+        f=[x[0] for x in ROWS].index(c)+1
+        d.line([(46,int(Y(j+1))),(146,int(Y(f)))],fill=hx(TC[c]))
+    for i,(c,_) in enumerate(ROWS): tx(d,150,int(Y(i+1))-2,f"P{i+1} {c}",INK)
+    calm(d); return im
+
 def slide(k, head, scene, figt, bod, foot, name):
     im, d = page(k, 3, DATE)
     y = headline(im, head)
@@ -96,7 +112,11 @@ slide(3,"TOP FIVE COVERED BY 2.927 SECONDS",s_gaps,"Gaps at the flag in Las Vega
 slide(1,"PIASTRI FROM P17 TO THE VEGAS PODIUM",s_movers,"Grid slot vs finishing position.","Sainz climbs from 20th to eighth.","SWIPE >>>","3_1")
 slide(2,"VERSTAPPEN'S FOURTH WIN BUILDS A 37-POINT GAP",s_p2,"Drivers' standings after Las Vegas.","Two races left: Qatar and Abu Dhabi.","SWIPE >>>","3_2")
 slide(3,"LECLERC 10S PENALTY AFTER HITTING HAMILTON",s_ferrari,"The Ferrari clash in Las Vegas.","Leclerc still kept tenth place.","FOLLOW","3_3")
-names=[f"{v}_{i}" for v in "123" for i in "123"]
-sh=Image.new("RGB",(3*550+10,3*685+10),(60,60,60))
+# V4: slope -> feud -> P2 fight
+slide(1,"FROM P17 TO P3: PIASTRI'S VEGAS CHARGE",s_slope,"Starting grid vs finish, top 10.","Verstappen converted pole into the win.","SWIPE >>>","4_1")
+slide(2,"VERSTAPPEN WINS, RUSSELL HITS THE WALL IN P2",s_feud,"The front row, start to finish.","Verstappen: Russell is so far below my level.","SWIPE >>>","4_2")
+slide(3,"VERSTAPPEN NOW 37 POINTS CLEAR IN P2",s_p2,"Drivers' standings after Las Vegas.","Hamilton, Russell and Norris are split by three points.","FOLLOW","4_3")
+names=[f"{v}_{i}" for v in "1234" for i in "123"]
+sh=Image.new("RGB",(3*550+10,4*685+10),(60,60,60))
 for k,n in enumerate(names): sh.paste(Image.open(f"{OUT}/{n}.png").resize((540,675)),(10+(k%3)*550,10+(k//3)*685))
 sh.save(f"{OUT}/sheet.png"); print("done")
