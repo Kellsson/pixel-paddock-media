@@ -18,7 +18,7 @@ R.podium_rows = [(str(r["position"]), R.dr[R.acr[r["driver_number"]]]["last_name
                   "WINNER" if r["position"] == 1 else f"+{r['gap_to_leader']:.3f}", grid.index(R.acr[r["driver_number"]]) + 1) for r in res[:6]]
 
 S = [
-    dict(frames=105, brand=[("F1 RACE", "acc", 11), ("REPLAY", "acc", 11), ("MEXICO CITY 2026", "ink", 5)], chip="TITLE DECIDER"),
+    dict(frames=105, brand=[("F1 RACE", "acc", 11), ("REPLAY", "acc", 11), ("MEXICO CITY 2026", "ink", 5)], chip="TITLE DECIDER", logo=False),
     dict(frames=85, grid=True, header=[("HAMILTON", INK, 2), ("ON POLE", YEL, 2)], mark=(1,)),
     # start: Ferraris fight, run wide at T4, Verstappen up to P2, Leclerc leads
     dict(t0=204, t1=257, dur=9.0, live=True, cam=("pack", ["HAM", "LEC", "VER"], 11), labels=("HAM", "LEC", "VER"),
@@ -32,9 +32,9 @@ S = [
     dict(t0=3790, t1=3806, dur=1.8, live=True, cam=("over",), call=[(3791, "VER", [("VER LEADS", YEL, 2), ("AFTER THE STOPS", INK, 2)], "up")]),
     dict(t0=3806, t1=3824, dur=1.2, cam=("car", "BOT", 12)),
     # Bottas: suspension failure into Turn 1
-    dict(t0=3824, t1=3842, dur=6.4, live=True, cam=("car", "BOT", 12), labels=("BOT",),
+    dict(mood="tension", t0=3824, t1=3842, dur=6.4, live=True, cam=("car", "BOT", 12), labels=("BOT",),
          call=[(3826.5, "BOT", [("SUSPENSION", RED, 2), ("FAILURE", RED, 2)], "up"), (3833.8, "BOT", [("INTO THE", RED, 2), ("BARRIER", RED, 2)], "up")]),
-    dict(frames=80, note=[("RED FLAG", RED, 2), ("BARRIER REPAIRS", INK, 2)]),
+    dict(mood="tension", frames=80, note=[("RED FLAG", RED, 2), ("BARRIER REPAIRS", INK, 2)]),
     # standing restart: Hamilton past Leclerc into T1
     dict(t0=6488, t1=6513, dur=7.4, live=True, cam=("pack", ["VER", "HAM", "LEC"], 11), labels=("VER", "HAM", "LEC"),
          call=[(6489, "VER", [("STANDING", INK, 2), ("RESTART", YEL, 2)], "up"), (6497, "HAM", [("HAMILTON", INK, 2), ("TO P2", YEL, 2)], "up")]),
@@ -45,12 +45,12 @@ S = [
     # Lindblad / Piastri, Turn 2
     dict(t0=7480, t1=7495, dur=5.4, live=True, cam=("pack", ["LIN", "PIA"], 12), labels=("LIN", "PIA"),
          call=[(7486.5, "LIN", [("CONTACT", RED, 2), ("LIN AND PIA", INK, 2)], "up")]),
-    dict(t0=7495, t1=8618, dur=3.3, cam=("over",), call=[(7520, "VER", [("SAFETY CAR", YEL, 2)], "up")]),
+    dict(t0=7495, t1=8618, dur=3.3, cam=("over",), call=[(7520, "VER", [("SAFETY CAR", YEL, 2)], "up", 7918)]),
     # finish
-    dict(t0=8618, t1=8638, dur=5.5, live=True, cam=("pack", ["VER", "HAM"], 11), labels=("VER", "HAM"), win=True,
+    dict(mood="finish", t0=8618, t1=8638, dur=5.5, live=True, cam=("pack", ["VER", "HAM"], 11), labels=("VER", "HAM"), win=True,
          call=[(8620, "HAM", [("HAMILTON", INK, 2), ("ON THE ATTACK", YEL, 2)], "down"), (8634, "VER", [("VERSTAPPEN", GRN, 2), ("WINS", GRN, 2)], "up")]),
-    dict(frames=110, note=[("ANTONELLI P3", INK, 2), ("WORLD CHAMPION", YEL, 2), ("YOUNGEST EVER", GRN, 2), ("AGE 20Y 68D", MUT, 2)]),
-    dict(frames=170, board=True, extra=["WON BY 0.799 S"]),
+    dict(mood="podium", frames=110, note=[("ANTONELLI P3", INK, 2), ("WORLD CHAMPION", YEL, 2), ("YOUNGEST EVER", GRN, 2), ("AGE 20Y 68D", MUT, 2)]),
+    dict(mood="podium", frames=170, board=True, extra=["WON BY 0.799 S"]),
     dict(frames=150, brand=[("F1 RACE", "acc", 9), ("REPLAY", "acc", 9), ("MEXICO CITY 2026", "ink", 4)], follow=True),
 ]
 

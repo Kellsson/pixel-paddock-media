@@ -169,10 +169,10 @@ def tower(im, R, t, n=5):
     order = R.order(t)[:n]
     if not order: return im, []
     h = 6 + n * 9
-    im = shade(im, (SAFE_X0, 24, SAFE_X0 + 56, 24 + h), .15); d = ImageDraw.Draw(im)
-    d.rectangle([SAFE_X0, 24, SAFE_X0 + 55, 24 + h - 1], outline=EDGE)
+    im = shade(im, (SAFE_X0, TOW_Y, SAFE_X0 + 56, TOW_Y + h), .15); d = ImageDraw.Draw(im)
+    d.rectangle([SAFE_X0, TOW_Y, SAFE_X0 + 55, TOW_Y + h - 1], outline=EDGE)
     for i, c in enumerate(order):
-        y = 28 + i * 9
+        y = TOW_Y + 4 + i * 9
         tx(d, SAFE_X0 + 3, y, str(i + 1), YEL if i == 0 else MUT)
         d.rectangle([SAFE_X0 + 9, y, SAFE_X0 + 10, y + 4], fill=team_col(R.dr[c]["_team"]))
         tx(d, SAFE_X0 + 13, y, c, INK)
@@ -180,13 +180,25 @@ def tower(im, R, t, n=5):
             iv = R.interval(c, t)
             s = f"+{iv:.1f}" if isinstance(iv, (int, float)) and iv < 60 else ""
             tx(d, SAFE_X0 + 53 - tw(s), y, s, MUT)
-    av = [("_tower", SAFE_X0 + 28, 24 + h * k / 3, 30) for k in range(4)]
+    av = [("_tower", SAFE_X0 + 28, TOW_Y + h * k / 3, 30) for k in range(4)]
     return im, av
 
-def sc_banner(im, fr, text="SAFETY CAR", col=YEL):
+TOW_Y = 31
+SLATE = (59, 70, 86)
+def lap_counter(im, lap, laps):
+    """big lap count like the NEWS FLASH counter: current lap in neon green, total in slate"""
+    im = shade(im, (SAFE_X0, 7, SAFE_X1, 27), .15); d = ImageDraw.Draw(im)
+    d.rectangle([SAFE_X0, 7, SAFE_X1 - 1, 26], outline=EDGE)
+    tx(d, SAFE_X0 + 4, 15, "LAP", MUT)
+    a = f"{lap:02d}"; tx(d, SAFE_X0 + 20, 10, a, GRN, 3)
+    tx(d, SAFE_X0 + 20 + tw(a, 3) + 3, 10, f"/{laps}", SLATE, 3)
+    return im
+
+def sc_banner(im, fr, text="SAFETY CAR", col=BRAND["yellow"]):
     d = ImageDraw.Draw(im); on = (fr // 10) % 2 == 0
-    d.rectangle([SAFE_X0 + 46, 9, SAFE_X1 - 2, 18], fill=col if on else tuple(int(v * .4) for v in col))
-    tx(d, (SAFE_X0 + 46 + SAFE_X1 - 2) // 2 - tw(text) // 2, 11, text, (10, 10, 10) if on else col)
+    x0 = SAFE_X1 - tw(text) - 9
+    d.rectangle([x0, TOW_Y, SAFE_X1 - 1, TOW_Y + 11], fill=col if on else tuple(int(v * .4) for v in col))   # under the lap counter, right
+    tx(d, x0 + 4, TOW_Y + 3, text, (10, 10, 10) if on else col)
 
 def crash_fx(d, R, tr, cam, t, px):
     """Tyre barrier on the outside of the corner, debris on impact, smoke afterwards."""
@@ -224,15 +236,16 @@ def btext(im, t, font, sc, col, cy, cx=540):
     im.paste(Image.new("RGB", m.size, col), (cx - m.size[0] // 2, cy - m.size[1] // 2), m)
     return m.size[0]
 
-def brand_card(fr, R, lines, chip=None, track=True, follow=False):
+def brand_card(fr, R, lines, chip=None, track=True, follow=False, show_logo=True):
     """Full-resolution (1080x1920) card in the Pixel Paddock brand: paper, speckles, logo, pixel fonts, neon accent."""
     W, H = NW * SC, NH * SC; im = Image.new("RGB", (W, H), PP["paper"]); d = ImageDraw.Draw(im)
     rr = np.random.default_rng(3)
     for _ in range(900):
         x, y = int(rr.integers(0, W // 5)) * 5, int(rr.integers(0, H // 5)) * 5; d.rectangle([x, y, x + 4, y + 4], fill=PP["speck"])
-    logo = Image.open(_LOGO).convert("RGB").resize((140, 140), Image.NEAREST)
-    if fr >= 2: im.paste(logo, (W // 2 - 70, 150))
-    if fr >= 4: btext(im, "THE PIXEL PADDOCK", "label", 3, PP["mute"], 330)
+    if show_logo:
+        logo = Image.open(_LOGO).convert("RGB").resize((140, 140), Image.NEAREST)
+        if fr >= 2: im.paste(logo, (W // 2 - 70, 150))
+    if fr >= 4: btext(im, "THE PIXEL PADDOCK", "label", 3, PP["mute"], 330 if show_logo else 250)
     y = 560
     for i, (t, col, sc) in enumerate(lines):
         if fr >= 10 + i * 6:
@@ -294,8 +307,10 @@ def plan(segs):
             u = np.arange(F) / F
             sg["times"] = hermite(u, sg["t0"], sg["t1"], sg["dur"], v0, v1)
         sg["call_f"] = []
-        for tc, tgt, lines, side in sg.get("call", ()):
-            f = int(np.searchsorted(sg["times"], tc)); sg["call_f"].append((min(f, F - 1), tgt, lines, side))
+        for c in sg.get("call", ()):
+            tc, tgt, lines, side = c[:4]
+            f = int(np.searchsorted(sg["times"], tc)); e = (int(np.searchsorted(sg["times"], c[4])),) if len(c) > 4 else ()
+            sg["call_f"].append((min(f, F - 1), tgt, lines, side) + e)
         sg["laps"] = (0, 1)          # engine sound bed in make_audio
 
 def render(R, segs, name, audio_tag):
@@ -304,14 +319,26 @@ def render(R, segs, name, audio_tag):
     total = sum(s["frames"] for s in segs)
     aud_segs = []
     for sg in segs:
-        a = {k: v for k, v in sg.items() if k not in ("times", "call", "call_f", "board", "grid")}
+        a = {k: v for k, v in sg.items() if k not in ("times", "call", "call_f", "board", "grid", "laps")}
         if "call_f" in sg: a["call"] = sg["call_f"]
         if sg.get("board"): a["board"] = ("", R.podium_rows, [])
         if sg.get("brand"): a["note"] = sg["brand"] + ([("", 0, 0)] if sg.get("chip") else [])
         aud_segs.append(a)
-    wav = M.make_audio(audio_tag)(aud_segs, total)
+    wav = M.make_audio(audio_tag, motif=False)(aud_segs, total)
+    # chiptune under the effects: mood per scene (title, race, tension, finish, podium, outro)
+    import wave, music
+    secs, acc = [], 0
+    for i, sg in enumerate(segs):
+        mood = sg.get("mood") or ("title" if i == 0 else "outro" if i == len(segs) - 1 else "race")
+        if not secs or secs[-1][1] != mood: secs.append((acc / FPS, mood))
+        acc += sg["frames"]
+    song = music.song(total / FPS + 1, secs)
+    with wave.open(wav) as w: fx = np.frombuffer(w.readframes(w.getnframes()), np.int16) / 32767
+    n = min(len(fx), len(song)); mixd = np.tanh(fx[:n] * .9 + song[:n] * .55)
+    with wave.open(wav, "wb") as w:
+        w.setnchannels(1); w.setsampwidth(2); w.setframerate(music.SR); w.writeframes((mixd * 32767 * .9).astype(np.int16).tobytes())
     p = subprocess.Popen(["ffmpeg", "-y", "-loglevel", "error", "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", f"{NW*SC}x{NH*SC}", "-r", str(FPS), "-i", "-",
-                          "-i", wav, "-c:v", "libx264", "-pix_fmt", "yuv420p", "-crf", "18", "-c:a", "aac", "-b:a", "160k", "-shortest",
+                          "-i", wav, "-c:v", "libx264", "-pix_fmt", "yuv420p", "-crf", "18", "-af", "volume=7dB,alimiter=limit=0.95", "-c:a", "aac", "-b:a", "160k", "-shortest",
                           f"{OUT}/{name}.mp4"], stdin=subprocess.PIPE)
     over = (tr.cx, tr.cy - 8 / tr.fit, 1.0)
     apply_brand(); M.HIRES = []
@@ -322,7 +349,7 @@ def render(R, segs, name, audio_tag):
             for fr in range(F):
                 im = Image.new("RGB", (NW, NH), BG)
                 if sg.get("brand"):
-                    big = brand_card(fr, R, sg["brand"], sg.get("chip"), sg.get("track", True), sg.get("follow", False))
+                    big = brand_card(fr, R, sg["brand"], sg.get("chip"), sg.get("track", True), sg.get("follow", False), sg.get("logo", True))
                     if fr == F - 4: snaps.append(big.resize((NW, NH), Image.NEAREST))
                     p.stdin.write(big.tobytes()); continue
                 if sg.get("note"): im = note_card(im, tr, sg["note"], fr)
@@ -381,7 +408,7 @@ def render(R, segs, name, audio_tag):
                         placed.append((lx, ly))
                         tx(d, lx + 1, ly + 1, c, (6, 8, 16)); tx(d, lx, ly, c, INK); avoid.append((c, sx, ly + 2, tw(c) / 2 + 1))
             leader = order[0] if order else R.cars[0]
-            im = hud(im, R.lap(leader, t), R.laps, R.dr[leader]["last_name"].upper(), R.dr[leader]["_team"])
+            im = lap_counter(im, R.lap(leader, t), R.laps)
             if sc_on: sc_banner(im, fr)
             if sg.get("red"): sc_banner(im, fr, "RED FLAG", RED)
             if not sg.get("notower"):

@@ -604,10 +604,11 @@ def mix(buf, sig, at):
     i = int(at * SR); j = min(len(buf), i + len(sig))
     if 0 <= i < len(buf): buf[i:j] += sig[:j - i]
 MOTIF = [(64, 0, .3), (67, .3, .3), (71, .6, .3), (69, .9, .6), (67, 1.5, .3), (64, 1.8, .9)]
-def make_audio(tag):
+def make_audio(tag, motif=True):
     def f(segs, total):
         buf = np.zeros(int(SR * total / FPS) + SR)
-        for m, t, du in MOTIF: mix(buf, tone(NOTE(m), du * 1.2, .10, "tri", 1.5), .3 + t)
+        if motif:
+            for m, t, du in MOTIF: mix(buf, tone(NOTE(m), du * 1.2, .10, "tri", 1.5), .3 + t)
         acc = 0; env = np.zeros(len(buf))
         for sg in segs:
             st = acc / FPS; F = sg["frames"]
@@ -626,7 +627,7 @@ def make_audio(tag):
                     t0 = st + (10 + i * 40) / FPS
                     for k in range(10): mix(buf, tone(NOTE(84), .015, .045, "sq", 40), t0 + k * 30 / FPS / 10)
                     mix(buf, tone(NOTE(76 + i * 5), .2, .08, "sq", 5), t0 + 30 / FPS)
-            elif sg.get("outro"):
+            elif sg.get("outro") and motif:
                 for m, t, du in MOTIF: mix(buf, tone(NOTE(m), du * 1.2, .10, "tri", 1.5), st + .3 + t)
             else:
                 if sg.get("note") or sg.get("text"):
