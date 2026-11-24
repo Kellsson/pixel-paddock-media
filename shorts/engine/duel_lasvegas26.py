@@ -41,7 +41,7 @@ calls = [
     (A["lap"] + .05, "ANT", [("ANTONELLI", INK, 2), (f"FASTER BY {B['lap'] - A['lap']:.3f}", GRN, 2)], "up"),
     (B["lap"] + .1, "ANT", [("S3 DECIDED IT", INK, 2), (f"ANT -{B['secs'][2] - A['secs'][2]:.3f} S", GRN, 2)], "up"),
 ]
-before = [dict(frames=100, brand=[("QUALI", "acc", 11), ("DUEL", "acc", 11), ("LAS VEGAS 2026", "ink", 5)], chip="ANT VS VER", logo=False)]
+before = [dict(frames=110, brand=[("QUALI", "acc", 11), ("DUEL", "acc", 11), ("LAS VEGAS 2026", "ink", 5)], chip="ANT VS VER", logo=False, cars=1020)]
 after = [
     dict(frames=150, table=True, mood="podium"),
     dict(frames=110, mood="podium", note=[("ANT: LIN TOW", GRN, 2), ("ALL LAP", GRN, 2), ("VER: NO TOW", INK, 2)]),

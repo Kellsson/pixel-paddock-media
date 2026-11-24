@@ -198,7 +198,10 @@ def gap_ribbon(d, du, cam, d0, d1, col, z):
     for k in range(n + 1):
         x, y, h = du.at(d0 + (d1 - d0) * k / n); pts.append(project(du.tr, cam, (x, y)) + (h,))
     d.line([(p[0], p[1]) for p in pts], fill=col, width=2)
-    sx, sy, h = pts[0]; hw = track_w(z) / 2 - 1                     # tick across the track where the ghost is
+
+def nose_line(d, du, cam, dd, col, z):
+    """line across the track at the car's nose, in the car's colour"""
+    x, y, h = du.at(dd); sx, sy = project(du.tr, cam, (x, y)); hw = track_w(z) / 2 - 1
     d.line([(sx - math.sin(h) * hw, sy + math.cos(h) * hw), (sx + math.sin(h) * hw, sy - math.cos(h) * hw)], fill=col, width=1)
 
 def ghost_car(im, sx, sy, h, team, px, k):
@@ -263,6 +266,23 @@ def sector_table(im, du, fr, title="SECTORS"):
         d.rectangle([cols[2] - 12, y, cols[2] - 11, y + 4], fill=team_col(who["team"])); tx(d, cols[2] - 8, y, s, INK)
     return im
 
+def title_cars(big, du, fr, y0):
+    """both cars in their team colours under the title, sliding in from the sides, surname under each"""
+    W = big.size[0]; d = ImageDraw.Draw(big); K = 7
+    for i, c in enumerate(du.cars):
+        k = ease(min(1, max(0, fr - 30 - i * 4) / 14))
+        if k <= 0: continue
+        sm = Image.new("RGB", (34, 34), PP["paper"]); draw_car(ImageDraw.Draw(sm), 17, 17, -math.pi / 2, c["team"], 30)
+        car = sm.resize((34 * K, 34 * K), Image.NEAREST)
+        mask = Image.fromarray((np.abs(np.asarray(car, int) - np.array(PP["paper"])).sum(2) > 6).astype(np.uint8) * 255)
+        cx = int(W / 2 + (-1 if i == 0 else 1) * (W * .22 + (1 - k) * W * .5)); big.paste(car, (cx - 17 * K, y0), mask)
+        name = du.D[c["code"]]["last_name"].upper(); col = team_col(c["team"])
+        if k >= 1:
+            ln = btext(big, name, "label", 4, PP["ink"], y0 + 34 * K + 40, cx)
+            d.rectangle([cx - ln // 2, y0 + 34 * K + 70, cx + ln // 2, y0 + 34 * K + 77], fill=col)
+    if fr >= 46: btext(big, "VS", "head", 6, PP["acc"], y0 + 17 * K)
+    return big
+
 # ---------------- render ----------------
 def render_duel(du, plan, name, cards_before, cards_after, calls, mood_split=None):
     import subprocess, wave, music
@@ -306,7 +326,8 @@ def render_duel(du, plan, name, cards_before, cards_after, calls, mood_split=Non
         F = s["frames"]
         for fr in range(F):
             if s.get("brand"):
-                big = brand_card(fr, du, s["brand"], s.get("chip"), s.get("track", True), s.get("follow", False), s.get("logo", True))
+                big = brand_card(fr, du, s["brand"], s.get("chip"), s.get("track", True) and not s.get("cars"), s.get("follow", False), s.get("logo", True))
+                if s.get("cars"): big = title_cars(big, du, fr, s["cars"])
                 M.HIRES = []; p.stdin.write(big.tobytes())
                 if fr == F - 4: snaps.append(big.resize((NW, NH), Image.NEAREST))
                 continue
@@ -327,7 +348,8 @@ def render_duel(du, plan, name, cards_before, cards_after, calls, mood_split=Non
                     for q in range(-int(hw), int(hw) + 1, 2): d.point((sx + math.cos(h) * q, sy + math.sin(h) * q), fill=MUT)
                 gap_m = poses[li][4] - poses[gi][4]
                 if t >= min(c_['lap'] for c_ in du.cars): gap_m = 0       # after the line only the official gap counts
-                if gap_m > .5: gap_ribbon(d, du, cam, poses[gi][4], poses[li][4], team_col(du.cars[li]["team"]), z)
+                nose = du.car_m * .5
+                if gap_m > .5: gap_ribbon(d, du, cam, poses[gi][4] + nose, poses[li][4] + nose, team_col(du.cars[li]["team"]), z)
                 for e in du.extra:                                             # real car ahead on track (tow), faint
                     a0, a1 = e["show"]; k = min(1, (t - a0) / 1.5, (a1 - t) / 1.5)
                     if k <= 0: continue
@@ -343,6 +365,7 @@ def render_duel(du, plan, name, cards_before, cards_after, calls, mood_split=Non
                     if i == gi: im = ghost_car(im, sx, sy, h, c["team"], px, .5); d = ImageDraw.Draw(im)
                     else: draw_car(d, sx, sy, h, c["team"], px)
                     anchors[c["code"]] = (sx, sy); avoid.append((c["code"], sx, sy, px * .55))
+                for i in (gi, li): nose_line(d, du, cam, poses[i][4] + nose, team_col(du.cars[i]["team"]), z)
                 # labels at a fixed screen offset: leader above its car, ghost below (no jitter, never on top of each other)
                 for i, up in ((li, True), (gi, False)):
                     c = du.cars[i]; sx, sy = scr[i]; lx = int(round(sx)) - tw(c["code"]) // 2
