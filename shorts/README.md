@@ -53,3 +53,11 @@ Brand look (replays): the Pixel Paddock palette (paper, speckles, ink, neon gree
 
 Engine: `engine/replay.py`, race config `engine/replay_mexico26.py`, sources [SOURCES_REPLAY.md](SOURCES_REPLAY.md).
 New race: `replay_fetch.py` -> `replay_prep.py` -> copy a config, find highlight times in the data, render. The raw data is not in the repo (OpenF1 CC BY-NC-SA, non-commercial).
+
+## Quali duels (real data)
+The two fastest laps run side by side, pinned to the official sector times, with a live gap, speeds, a mini map and a sector table at the end.
+| Session | Video |
+|---|---|
+| Las Vegas 2026 quali: Antonelli vs Verstappen (50 s) | [duels/2026_lasvegas/duel.mp4](duels/2026_lasvegas/duel.mp4) |
+
+Engine: `engine/duel.py`, config `engine/duel_lasvegas26.py`, sources [SOURCES_DUEL.md](SOURCES_DUEL.md).
