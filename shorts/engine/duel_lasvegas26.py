@@ -29,7 +29,7 @@ du.add_tow("ANT", f"{HERE}/../data/2026_lasvegas_q/ant_lap_all.pkl", "LIN", show
 cA = lambda k: sum(A["secs"][:k]); cB = lambda k: sum(B["secs"][:k])
 g1, g2 = A["secs"][0] - B["secs"][0], A["secs"][1] - B["secs"][1]
 
-plan = [(-1.0, None), (54.0, 4.2), (90.5, 2.8), (97.3, 1.0)]       # lap time -> playback speed
+plan = [(-1.0, None), (54.0, 4.2), (90.5, 2.8), (A["lap"], 1.0)]       # lap time -> playback speed
 calls = [
     (max(cA(1), cB(1)) + .2, "VER", [("S1: VER", INK, 2), (f"-{g1:.3f} S", GRN, 2)], "up"),
     (max(cA(2), cB(2)) + .2, "VER", [("S2: VER", INK, 2), (f"-{g2:.3f} S", GRN, 2)], "up"),
@@ -37,17 +37,17 @@ calls = [
     (60.0, "LIN", [("LINDBLAD AHEAD", INK, 2), ("= ANT'S TOW", GRN, 2)], "up"),
     (66.5, "ANT", [("ANT 351 KM/H", GRN, 2), ("VER MAX 340", INK, 2)], "up"),
     (74.0, "ANT", [("ANT CLOSES", INK, 2), ("THE GAP", GRN, 2)], "up"),
-    (84.0, "ANT", [("NECK AND NECK", INK, 2)], "up"),
-    (A["lap"] + .05, "ANT", [("ANTONELLI", INK, 2), (f"FASTER BY {B['lap'] - A['lap']:.3f}", GRN, 2)], "up"),
-    (B["lap"] + .1, "ANT", [("S3 DECIDED IT", INK, 2), (f"ANT -{B['secs'][2] - A['secs'][2]:.3f} S", GRN, 2)], "up"),
+    (84.0, "ANT", [("NECK AND NECK", INK, 2)], "up", A["lap"]),
+    (A["lap"] + 1.0, "ANT", [("ANTONELLI", INK, 2), (f"FASTER BY {B['lap'] - A['lap']:.3f}", GRN, 2)], "down"),
+    (A["lap"] + 3.2, "ANT", [("S3 DECIDED IT", INK, 2), (f"ANT -{B['secs'][2] - A['secs'][2]:.3f} S", GRN, 2)], "down"),
 ]
-before = [dict(frames=110, brand=[("QUALI", "acc", 11), ("DUEL", "acc", 11), ("LAS VEGAS 2026", "ink", 5)], chip="ANT VS VER", logo=False, cars=1020)]
+before = [dict(frames=110, brand=[("F1 QUALI", "acc", 11), ("DUEL", "acc", 11), ("LAS VEGAS 2026", "ink", 5)], logo=False, cars=900)]
 after = [
     dict(frames=150, table=True, mood="podium"),
     dict(frames=110, mood="podium", note=[("ANT: LIN TOW", GRN, 2), ("ALL LAP", GRN, 2), ("VER: NO TOW", INK, 2)]),
     dict(frames=110, mood="podium", note=[("FASTEST: ANT", GRN, 2), ("5-PLACE GRID", RED, 2), ("PENALTY", RED, 2), ("VER ON POLE", INK, 2)]),
-    dict(frames=140, brand=[("QUALI", "acc", 9), ("DUEL", "acc", 9), ("LAS VEGAS 2026", "ink", 4)], follow=True),
+    dict(frames=140, brand=[("F1 QUALI", "acc", 9), ("DUEL", "acc", 9), ("LAS VEGAS 2026", "ink", 4)], follow=True),
 ]
 
 if __name__ == "__main__":
-    render_duel(du, plan, "duel_2026_lasvegas", before, after, calls, mood_split=54.0)
+    render_duel(du, plan, "duel_2026_lasvegas", before, after, calls, mood_split=54.0, hold_s=6.0)

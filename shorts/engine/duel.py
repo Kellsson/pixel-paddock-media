@@ -284,7 +284,7 @@ def title_cars(big, du, fr, y0):
     return big
 
 # ---------------- render ----------------
-def render_duel(du, plan, name, cards_before, cards_after, calls, mood_split=None):
+def render_duel(du, plan, name, cards_before, cards_after, calls, mood_split=None, hold_s=0):
     import subprocess, wave, music
     TEAMS.setdefault("TOW_GREY", livery("8A8170"))
     tr = du.tr; SIZE.update(track_m=du.track_m, car_m=du.car_m, fit=tr.fit); apply_brand(); M.HIRES = []
@@ -293,6 +293,10 @@ def render_duel(du, plan, name, cards_before, cards_after, calls, mood_split=Non
     times = []; t = plan[0][0]
     for t_end, sp in plan[1:]:
         while t < t_end: times.append(t); t += sp / FPS
+    # freeze when the first car crosses the line: both cars stop, gap is shown. Virtual time keeps running for the
+    # fact boxes (a call at first_lap + x appears x seconds into the freeze).
+    t_fin = min(c["lap"] for c in du.cars)
+    times = [x for x in times if x < t_fin] + [t_fin + k / FPS for k in range(int(hold_s * FPS))] if hold_s else times
     times = np.array(times); F_duel = len(times)
     call_f = [(int(np.searchsorted(times, tc)), tgt, lines, side) + ((int(np.searchsorted(times, c_[4])),) if len(c_) > 4 else ())
               for c_ in calls for tc, tgt, lines, side in [c_[:4]]]
@@ -335,19 +339,27 @@ def render_duel(du, plan, name, cards_before, cards_after, calls, mood_split=Non
             if s.get("note"): im = note_card(im, tr, s["note"], fr)
             elif s.get("table"): im = sector_table(im, du, fr)
             elif s.get("duel"):
-                t = float(times[fr]); poses = [du.pose(c, t) for c in du.cars]
+                frozen = hold_s and times[fr] >= t_fin
+                t = float(min(times[fr], t_fin - 1e-3) if hold_s else times[fr]); poses = [du.pose(c, t) for c in du.cars]
                 dl = du.delta(t); want = 0 if dl >= 0 else 1
                 if abs(dl) > .02 or s.get("_lead") is None: s["_lead"] = want if s.get("_lead") is None or abs(dl) > .02 else s["_lead"]
                 li = s["_lead"]; gi = 1 - li
                 mid = ((poses[0][0] + poses[1][0]) / 2, (poses[0][1] + poses[1][1]) / 2)
-                z = du.zoom_px / (du.car_m * tr.fit); cam = (mid[0], mid[1], z)
+                z = du.zoom_px / (du.car_m * tr.fit)
+                ez = ease((times[fr] - t_fin) / 1.2) if frozen else 0
+                z *= 1 + 1.3 * ez                                              # zoom in on the gap at the line
+                cam = (mid[0], mid[1] + 28 * ez / (tr.fit * z), z)             # and lift the cars to make room below
                 d = draw_map(im, tr, cam); px = car_px(z); anchors = {}; avoid = []
                 d = draw_landmarks(im, du, cam, fr, avoid)
                 for k_, dd in enumerate(du.dsec[1:3]):                       # sector lines on track
                     x_, y_, h = du.at(dd); h += math.pi / 2; sx, sy = project(tr, cam, (x_, y_)); hw = track_w(z) / 2
                     for q in range(-int(hw), int(hw) + 1, 2): d.point((sx + math.cos(h) * q, sy + math.sin(h) * q), fill=MUT)
+                x_, y_, h_ = du.at(0.0); fx_, fy_ = project(tr, cam, (x_, y_)); hw_ = track_w(z) / 2
+                for q in range(-int(hw_), int(hw_) + 1):
+                    for r_ in (0, 1):
+                        cx_ = fx_ - math.sin(h_) * q + math.cos(h_) * r_; cy_ = fy_ + math.cos(h_) * q + math.sin(h_) * r_
+                        d.point((cx_, cy_), fill=INK if (q + r_) % 2 else BG)
                 gap_m = poses[li][4] - poses[gi][4]
-                if t >= min(c_['lap'] for c_ in du.cars): gap_m = 0       # after the line only the official gap counts
                 nose = du.car_m * .5
                 if gap_m > .5: gap_ribbon(d, du, cam, poses[gi][4] + nose, poses[li][4] + nose, team_col(du.cars[li]["team"]), z)
                 for e in du.extra:                                             # real car ahead on track (tow), faint
@@ -366,6 +378,15 @@ def render_duel(du, plan, name, cards_before, cards_after, calls, mood_split=Non
                     else: draw_car(d, sx, sy, h, c["team"], px)
                     anchors[c["code"]] = (sx, sy); avoid.append((c["code"], sx, sy, px * .55))
                 for i in (gi, li): nose_line(d, du, cam, poses[i][4] + nose, team_col(du.cars[i]["team"]), z)
+                if frozen and gap_m > 2:                                       # the loser's gap, measured on track
+                    x_, y_, h_ = du.at((poses[gi][4] + poses[li][4]) / 2 + nose); mx, my = project(tr, cam, (x_, y_))
+                    k_ = 1; lb = f"{gap_m:.0f} M"
+                    nx_, ny_ = -math.sin(h_), math.cos(h_); off = track_w(z) / 2 + 8
+                    if ny_ < 0: nx_, ny_ = -nx_, -ny_                             # label below the track (leader label sits above)
+                    lx = int(mx - tw(lb, 2) / 2); ly = int(my + (track_w(z) / 2) / max(.35, abs(math.cos(h_))) + 5)
+                    if ez > .5:
+                        d.rectangle([lx - 3, ly - 3, lx + tw(lb, 2) + 2, ly + 12], fill=BG, outline=team_col(du.cars[li]["team"]))
+                        tx(d, lx, ly, lb, INK, 2); avoid.append(("_gap", lx + tw(lb, 2) / 2, ly + 5, tw(lb, 2) / 2 + 4))
                 # labels at a fixed screen offset: leader above its car, ghost below (no jitter, never on top of each other)
                 for i, up in ((li, True), (gi, False)):
                     c = du.cars[i]; sx, sy = scr[i]; lx = int(round(sx)) - tw(c["code"]) // 2
