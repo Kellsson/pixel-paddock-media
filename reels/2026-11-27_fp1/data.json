@@ -1,0 +1,61 @@
+{
+ "session_key": 11421,
+ "rows": [
+  [
+   "ANT",
+   "Mercedes",
+   "LEADER"
+  ],
+  [
+   "RUS",
+   "Mercedes",
+   "+0.507"
+  ],
+  [
+   "HAD",
+   "Red Bull",
+   "+0.661"
+  ],
+  [
+   "NOR",
+   "McLaren",
+   "+0.850"
+  ],
+  [
+   "PIA",
+   "McLaren",
+   "+0.860"
+  ],
+  [
+   "VER",
+   "Red Bull",
+   "+0.916"
+  ],
+  [
+   "LEC",
+   "Ferrari",
+   "+1.256"
+  ],
+  [
+   "HAM",
+   "Ferrari",
+   "+1.358"
+  ],
+  [
+   "LIN",
+   "Racing Bulls",
+   "+1.384"
+  ],
+  [
+   "GAS",
+   "Alpine",
+   "+1.657"
+  ]
+ ],
+ "moves": null,
+ "insight": [
+  "ANT TOPS FP1",
+  "MARGIN TO P2: 0.507S",
+  "TOP 10 WITHIN 1.657S"
+ ]
+}
