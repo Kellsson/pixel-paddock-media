@@ -55,9 +55,34 @@ Engine: `engine/replay.py`, race config `engine/replay_mexico26.py`, sources [SO
 New race: `replay_fetch.py` -> `replay_prep.py` -> copy a config, find highlight times in the data, render. The raw data is not in the repo (OpenF1 CC BY-NC-SA, non-commercial).
 
 ## Quali duels (real data)
-The two fastest laps run side by side, pinned to the official sector times, with a live gap, speeds, a mini map and a sector table at the end.
+The two fastest laps overlaid on one line (leader on top, the other as a ghost), pinned to the official sector times, with a live gap, speeds, a mini map, real landmarks, a freeze at the finish line and a sector table at the end.
 | Session | Video |
 |---|---|
-| Las Vegas 2026 quali: Antonelli vs Verstappen (50 s) | [duels/2026_lasvegas/duel.mp4](duels/2026_lasvegas/duel.mp4) |
+| Las Vegas 2026 quali: Antonelli vs Verstappen (56 s, scheduled 26 Nov) | [duels/2026_lasvegas/duel.mp4](duels/2026_lasvegas/duel.mp4) |
 
 Engine: `engine/duel.py`, config `engine/duel_lasvegas26.py`, sources [SOURCES_DUEL.md](SOURCES_DUEL.md).
+
+## Style rules from feedback (all short formats)
+Brand and layout
+- Everything on-brand and recognisable across Instagram and YouTube: Pixel Paddock palette, speckled paper background, Press Start 2P / Silkscreen at full resolution.
+- Title cards: format name big ("F1 RACE REPLAY", "F1 QUALI DUEL"), place + year (no full date), no Pixel Paddock logo (YouTube shows the channel logo). Always say "F1".
+- Text in boxes vertically centred, on dark panels; fact boxes at least 2.4 s on screen and ended when the fact stops being true (e.g. SC in).
+- Nothing important in the bottom ~30 % or the right edge (YouTube overlay). Text never covers the action.
+
+Story
+- One fact per beat, callout next to the action, max 2 lines. Easy to follow, nerdy, exciting, no clickbait.
+- Every on-screen claim sourced (SOURCES*.md) or proven in the data and explained on screen (e.g. "LINDBLAD AHEAD = ANT'S TOW").
+- Always check plausibility: no cars backwards, off track, facing the wrong way at standstill, flying across the track.
+
+Race replays
+- Zoom out slowly and only after enough time; slow down + zoom for highlights.
+- Crashes shown where they happened, with damage animation; wreck removed when it really was.
+- Lap counter big and prominent (News-Flash style), no driver name beside it. Chiptune music, mixed loud enough.
+
+Quali duels
+- Overlay, never side by side (looks like a race). Leader on top, trailing car as a ghost.
+- Line across the track at each car's nose in its team colour + gap line between them; gap in s and metres in the HUD.
+- Smooth everything (positions, gap readout, speeds, labels); "LEVEL" below 0.05 s.
+- Mini track map stays. Real landmarks at real positions/scale (aligned GeoJSON).
+- Title: both cars in team colours with surnames, "VS" between them, no extra name box.
+- Freeze both cars when the first crosses the line, zoom in, show the gap to the loser.
