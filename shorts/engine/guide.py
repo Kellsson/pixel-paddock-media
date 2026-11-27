@@ -62,7 +62,8 @@ def draw_ground(im, du, cam, z, fr):
     tr = du.tr; w = track_w(z); s_px = tr.fit * z
     D = M.track_dist(tr, cam, w); a = np.asarray(im).copy()
     sand = D > w / 2 + du.grass_m * s_px
-    a[sand] = SAND; a[~sand] = GRASS
+    a[sand] = SAND
+    if du.grass_m > 0: a[~sand] = GRASS
     im.paste(Image.fromarray(a)); d = ImageDraw.Draw(im)
     hw, hh = NW / 2 / s_px + 10, NH / 2 / s_px + 10                    # sand grains anchored to the world (no flicker)
     for gx in range(int((cam[0] - hw) // 7), int((cam[0] + hw) // 7) + 1):
@@ -97,6 +98,20 @@ def draw_poles(d, du, cam, z, fr):
             d.rectangle([sx - 1, sy - 1, sx + 1, sy + 1], fill=GLOW); d.point((sx, sy), fill=POLE)
 
 
+def drs_lines(d, du, cam, z, avoid):
+    """FIA DRS detection / activation lines across the track"""
+    for s, col, lb in du.drs_marks:
+        x_, y_, h_ = du.at(s); sx, sy = project(du.tr, cam, (x_, y_)); hw = track_w(z) / 2
+        if not (-hw < sx < NW + hw and -hw < sy < NH + hw): continue
+        for q in range(-int(hw), int(hw) + 1):
+            if q % 3 != 2: d.point((sx - math.sin(h_) * q, sy + math.cos(h_) * q), fill=col)
+        ox, oy = sx - math.sin(h_) * (hw + 8), sy + math.cos(h_) * (hw + 8)
+        lx, ly = int(ox - tw(lb) / 2), int(oy - 2)
+        if 2 < lx < NW - tw(lb) - 2 and 4 < ly < NH - 8:
+            d.rectangle([lx - 2, ly - 2, lx + tw(lb) + 1, ly + 6], fill=BG, outline=col); tx(d, lx, ly, lb, col)
+            avoid.append((lb, ox, oy, tw(lb) / 2 + 3))
+
+
 def corner_tags(d, du, cam, z, avoid):
     s_px = du.tr.fit * z
     for c in du.corners:
@@ -112,6 +127,7 @@ def guide_hud(im, du, t, lapt_txt, col):
     c = du.car; tm = float(np.interp(du.dist(c, t), c["d"], c["t"]))
     v = float(np.interp(tm, c["ct"], c["v"])); k = int(np.argmin(np.abs(c["ct"] - tm)))
     gear, thr, brk = int(c["ch"]["n_gear"][k]), float(np.interp(tm, c["ct"], c["ch"]["throttle"])), c["ch"]["brake"][k] > 0
+    drs = c["ch"]["drs"][k] >= 10
     im = shade(im, (SAFE_X0, 7, SAFE_X1, 27), .15); d = ImageDraw.Draw(im); d.rectangle([SAFE_X0, 7, SAFE_X1 - 1, 26], outline=EDGE)
     d.rectangle([SAFE_X0 + 4, 11, SAFE_X0 + 5, 15], fill=team_col(c["team"])); tx(d, SAFE_X0 + 8, 11, c["code"], INK)
     if len(lapt_txt) <= 6: tx(d, SAFE_X0 + 4, 18, du.hud_sub, MUT)
@@ -121,10 +137,14 @@ def guide_hud(im, du, t, lapt_txt, col):
     s = f"{int(round(v))}"; tx(d, SAFE_X0 + 4, y0 + 5, s, INK, 3); tx(d, SAFE_X0 + 4 + tw(s, 3) + 2, y0 + 12, "KMH", MUT)
     d.rectangle([SAFE_X0 + 52, y0 + 4, SAFE_X0 + 64, y0 + 17], outline=EDGE); g = str(gear) if gear > 0 else "N"
     tx(d, SAFE_X0 + 58 - tw(g, 2) // 2, y0 + 7, g, YEL, 2)
+    if getattr(du, "show_drs", False):                                  # DRS flap open (telemetry)
+        d.rectangle([SAFE_X0 + 51, y0 + 24, SAFE_X0 + 64, y0 + 34], fill=GRN if drs else BG, outline=GRN if drs else EDGE)
+        tx(d, SAFE_X0 + 52, y0 + 27, "DRS", BG if drs else MUT)
     for i, (lb, val, colr) in enumerate((("THR", thr / 100, GRN), ("BRK", 1.0 if brk else 0.0, RED))):
         y = y0 + 23 + i * 8; tx(d, SAFE_X0 + 4, y, lb, MUT); x1 = SAFE_X0 + 20
-        d.rectangle([x1, y, x1 + 44, y + 4], outline=EDGE)
-        if val > .02: d.rectangle([x1 + 1, y + 1, x1 + 1 + int(42 * val), y + 3], fill=colr)
+        bl = 28 if getattr(du, "show_drs", False) else 44
+        d.rectangle([x1, y, x1 + bl, y + 4], outline=EDGE)
+        if val > .02: d.rectangle([x1 + 1, y + 1, x1 + 1 + int((bl - 2) * val), y + 3], fill=colr)
     return im, [("_hud", SAFE_X0 + 31, y0 + 20, 34)]
 
 
@@ -215,6 +235,7 @@ def render_guide(du, plan, name, cards_before, cards_after, calls, mood_split=No
                             lx = int(max(SAFE_X0 + 1, min(SAFE_X1 - 1 - tw(b["label"]), bx - tw(b["label"]) / 2)))
                             d.rectangle([lx - 1, int(by) - 3, lx + tw(b["label"]), int(by) + 5], fill=BG); tx(d, lx, int(by) - 2, b["label"], MUT)
                             avoid.append((b["label"], bx, by, tw(b["label"]) / 2 + 2)); anchors[b["kind"]] = (bx, by)
+                drs_lines(d, du, cam, z, avoid)
                 corner_tags(d, du, cam, z, avoid)
                 for cn in du.corners: anchors[f"T{cn['n']}"] = project(tr, cam, du.off_pt(cn["s"], 0))
                 sx, sy = project(tr, cam, (x, y)); draw_car(d, sx, sy, h, c["team"], px)

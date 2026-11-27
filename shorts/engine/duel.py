@@ -22,7 +22,7 @@ def load_lap(raw, code, num, lap):
     loc = json.load(open(f"{raw}/{code}_location.json")); cd = json.load(open(f"{raw}/{code}_car_data.json"))
     t = np.array([ts(x["date"]) for x in loc]); p = np.array([[x["x"], x["y"]] for x in loc], float) * .1
     ct = np.array([ts(x["date"]) for x in cd]); v = np.array([x["speed"] for x in cd], float)
-    ch = {k: np.array([x[k] for x in cd], float) for k in ("n_gear", "throttle", "brake", "rpm")}
+    ch = {k: np.array([x[k] for x in cd], float) for k in ("n_gear", "throttle", "brake", "rpm", "drs")}
     secs = [lap["duration_sector_1"], lap["duration_sector_2"], lap["duration_sector_3"]]
     return dict(code=code, t=t, p=p, ct=ct, v=v, secs=secs, lap=lap["lap_duration"], ch=ch, T0=T0)
 
