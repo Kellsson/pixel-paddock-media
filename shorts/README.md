@@ -62,6 +62,14 @@ The two fastest laps overlaid on one line (leader on top, the other as a ghost),
 
 Engine: `engine/duel.py`, config `engine/duel_lasvegas26.py`, sources [SOURCES_DUEL.md](SOURCES_DUEL.md).
 
+## Track guides (real data)
+One real pole lap driven around the pixel map: corner numbers, live speed / gear / throttle / brake, lap timer, mini map, real surroundings (only what a source or the data backs up), freeze on the line, a stats card.
+| Track | Video |
+|---|---|
+| Lusail: Piastri 2025 pole lap 1:19.387 (59 s) | [guides/2025_lusail/guide.mp4](guides/2025_lusail/guide.mp4) |
+
+Engine: `engine/guide.py` (uses the duel engine), config `engine/guide_qatar.py`, sources [SOURCES_GUIDE.md](SOURCES_GUIDE.md).
+
 ## Style rules from feedback (all short formats)
 Brand and layout
 - Everything on-brand and recognisable across Instagram and YouTube: Pixel Paddock palette, speckled paper background, Press Start 2P / Silkscreen at full resolution.

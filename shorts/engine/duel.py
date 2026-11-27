@@ -22,10 +22,11 @@ def load_lap(raw, code, num, lap):
     loc = json.load(open(f"{raw}/{code}_location.json")); cd = json.load(open(f"{raw}/{code}_car_data.json"))
     t = np.array([ts(x["date"]) for x in loc]); p = np.array([[x["x"], x["y"]] for x in loc], float) * .1
     ct = np.array([ts(x["date"]) for x in cd]); v = np.array([x["speed"] for x in cd], float)
+    ch = {k: np.array([x[k] for x in cd], float) for k in ("n_gear", "throttle", "brake", "rpm")}
     secs = [lap["duration_sector_1"], lap["duration_sector_2"], lap["duration_sector_3"]]
-    return dict(code=code, t=t, p=p, ct=ct, v=v, secs=secs, lap=lap["lap_duration"])
+    return dict(code=code, t=t, p=p, ct=ct, v=v, secs=secs, lap=lap["lap_duration"], ch=ch, T0=T0)
 
-def build(raw, a_code, b_code):
+def build(raw, a_code, b_code, extra=None):
     D = {d["name_acronym"]: d for d in json.load(open(f"{raw}/drivers.json"))}
     L = json.load(open(f"{raw}/laps.json"))
     cars = []
@@ -33,7 +34,7 @@ def build(raw, a_code, b_code):
         n = D[c]["driver_number"]; best = min([l for l in L if l["driver_number"] == n and l["lap_duration"]], key=lambda l: l["lap_duration"])
         cars.append(load_lap(raw, c, n, best))
     # centre line from both laps (only samples inside the lap), resampled + smoothed
-    pts = np.vstack([c["p"][(c["t"] >= 0) & (c["t"] <= c["lap"])] for c in cars])
+    pts = np.vstack([c["p"][(c["t"] >= 0) & (c["t"] <= c["lap"])] for c in cars] + ([extra] if extra is not None else []))
     A = cars[0]["p"][(cars[0]["t"] >= 0) & (cars[0]["t"] <= cars[0]["lap"])]
     def resample(P, n, closed=True):
         Q = np.vstack([P, P[:1]]) if closed else P
@@ -90,9 +91,9 @@ def build(raw, a_code, b_code):
 
 class Duel:
     """Both laps are drawn on the SAME smoothed centre line at their own distance -> a true overlay (ghost) comparison."""
-    def __init__(self, raw, a, b):
+    def __init__(self, raw, a, b, extra=None):
         self.raw = raw
-        self.D, self.cars, C, self.length, self.dsec, self.tf = build(raw, a, b)
+        self.D, self.cars, C, self.length, self.dsec, self.tf = build(raw, a, b, extra)
         self.C = C; self.tr = RTrack(C, self.length); self.extra = []; self.landmarks = []
         for c in self.cars:
             k = "T26_" + self.D[c["code"]]["team_name"].replace(" ", "")[:10]
